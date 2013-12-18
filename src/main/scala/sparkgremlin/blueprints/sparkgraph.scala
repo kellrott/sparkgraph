@@ -241,7 +241,7 @@ object SparkGraphQuery {
 
 
 abstract class BaseQuery extends Query {
-  var direction : Direction = Direction.BOTH;
+  var directionValue : Direction = Direction.BOTH;
   var labelSet = Array[String]();
   var limit = Integer.MAX_VALUE;
   var hasContainers = new ArrayBuffer[HasContainer]();
@@ -297,7 +297,10 @@ object SparkVertexQuery {
 
 class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends BaseQuery with VertexQuery {
 
-  def direction(direction: Direction): VertexQuery = null
+  def direction(direction: Direction): VertexQuery = {
+    directionValue = direction;
+    return this;
+  }
 
   def labels(inLabels:String*): VertexQuery = {
     labelSet = inLabels.toArray;
@@ -305,7 +308,11 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
   }
 
   def count(): Long = {
-    throw new IllegalArgumentException("Null ID value");
+    var i = 0L;
+    for ( c <- edges().asScala ) {
+      i += 1;
+    }
+    return i;
   }
 
   def vertexIds(): AnyRef = {
@@ -354,14 +361,20 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
 
   def edges(): Iterable[Edge] = {
     graph.flushUpdates();
-    var nodes = graph.curgraph.lookup(vertex.id);
-    if (nodes.length == 0) {
-      return Array[Edge]().toIterable.asJava;
+    var outEdges = if (directionValue == Direction.OUT || directionValue == Direction.BOTH) {
+      val nodes = graph.curgraph.lookup(vertex.id);
+      if (nodes.length == 0) {
+        Array[SparkEdge]();
+      } else {
+        nodes.head.edgeSet.toArray
+      }
+    } else {
+      Array[SparkEdge]();
     }
 
     //var inEdges = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => SparkVertexQuery.idCmp(y.inVertexId, vertex.id) ) ).collect();
 
-    var edgeSet = nodes.head.edgeSet// ++ inEdges;
+    var edgeSet = outEdges// ++ inEdges;
     if (labelSet.length > 0) {
       edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
     }
@@ -386,7 +399,48 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
   }
 
   def vertices(): Iterable[Vertex] = {
-    throw new IllegalArgumentException("Null ID value");
+    graph.flushUpdates();
+
+    var nodes = graph.curgraph.lookup(vertex.id);
+    var outNodes = if (nodes.length == 0) {
+      Array[SparkVertex]();
+    } else {
+      var edgeSet = nodes.head.edgeSet;
+      if (labelSet.length > 0) {
+        edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
+      }
+      edgeSet.map( x=> new SparkVertex(x.inVertexId, graph) ).toArray;
+    }
+
+    //var inEdges = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => SparkVertexQuery.idCmp(y.inVertexId, vertex.id) ) ).collect();
+
+    var nodeSet = outNodes// ++ inEdges;
+    for ( has <- hasContainers ) {
+      nodeSet = has.predicate match {
+        case Compare.EQUAL => {
+          has.value match {
+            case null => nodeSet.filter( !_.propMap.contains(has.key) );
+            case _ => nodeSet.filter( _.propMap.getOrElse(has.key, null) == has.value )
+          }
+        }
+        case Compare.NOT_EQUAL => {
+          has.value match {
+            case null => nodeSet.filter( _.propMap.contains(has.key));
+            case _ => nodeSet.filter( _.propMap.getOrElse(has.key, null) != has.value);
+          }
+        }
+        case Contains.IN | Contains.NOT_IN => {
+          nodeSet.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
+        }
+        case Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.GREATER_THAN_EQUAL  => {
+          nodeSet.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
+        }
+        case _ => {
+          throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
+        }
+      }
+    }
+    return nodeSet.slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
   }
 }
 
@@ -541,6 +595,7 @@ object SparkGraph {
     return new SparkGraph(sc.parallelize(Array[(AnyRef,SparkVertex)]()));
   }
 }
+
 class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph {
 
   var curgraph : RDD[(AnyRef,SparkVertex)] = graph.persist();

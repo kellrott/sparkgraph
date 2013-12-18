@@ -10,6 +10,9 @@ libraryDependencies ++= Seq(
 	"org.apache.spark" %% "spark-core" % "0.8.0-incubating",
 	"com.tinkerpop.blueprints" % "blueprints-core" % "2.4.0",
 	"com.tinkerpop.blueprints" % "blueprints-test" % "2.4.0" % "test",
+	"com.tinkerpop" % "pipes" % "2.4.0",
+	"com.tinkerpop.gremlin" % "gremlin-java" % "2.4.0",
+	"com.tinkerpop.gremlin" % "gremlin-test" % "2.4.0" % "test",
 	"com.novocode" % "junit-interface" % "0.9" % "test"
 )	
 

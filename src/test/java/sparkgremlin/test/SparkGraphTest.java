@@ -83,40 +83,6 @@ public class SparkGraphTest extends GraphTest {
         printTestPerformance("VertexQueryTestSuite", this.stopWatch());
     }
 
-    public void testVertexEdgeLabels2() {
-        Graph graph = generateGraph();
-        Vertex a = graph.addVertex(null);
-        Vertex b = graph.addVertex(null);
-        Vertex c = graph.addVertex(null);
-        Edge aFriendB = graph.addEdge(null, a, b, convertLabel("friend"));
-        Edge aFriendC = graph.addEdge(null, a, c, convertLabel("friend"));
-        Edge aHateC = graph.addEdge(null, a, c, convertLabel("hate"));
-        Edge cHateA = graph.addEdge(null, c, a, convertLabel("hate"));
-        Edge cHateB = graph.addEdge(null, c, b, convertLabel("hate"));
-
-
-        List<Edge> results = asList(a.getEdges(Direction.OUT, convertLabel("friend"), convertLabel("hate")));
-        assertEquals(results.size(), 3);
-        assertTrue(results.contains(aFriendB));
-        assertTrue(results.contains(aFriendC));
-        assertTrue(results.contains(aHateC));
-
-        results = asList(a.getEdges(Direction.IN, convertLabel("friend"), convertLabel("hate")));
-        assertEquals(results.size(), 1);
-        assertTrue(results.contains(cHateA));
-
-        results = asList(b.getEdges(Direction.IN, convertLabel("friend"), convertLabel("hate")));
-        assertEquals(results.size(), 2);
-        assertTrue(results.contains(aFriendB));
-        assertTrue(results.contains(cHateB));
-
-        results = asList(b.getEdges(Direction.IN, convertLabel("blah"), convertLabel("blah2"), convertLabel("blah3")));
-        assertEquals(results.size(), 0);
-
-        graph.shutdown();
-
-    }
-
     @Override
     public Graph generateGraph() {
         return SparkGraph.generate(sc);
