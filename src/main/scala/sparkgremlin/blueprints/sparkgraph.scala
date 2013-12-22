@@ -220,7 +220,7 @@ class HasContainer(val key : String, val predicate: Predicate, val value:AnyRef)
 
 
 object SparkGraphQuery {
-  def containCheck(value:String, predicate : Predicate, valueSet:AnyRef) : Boolean = {
+  def containCheck(value:Any, predicate : Predicate, valueSet:AnyRef) : Boolean = {
     val out = valueSet match {
       case _ : List[String] => {
         valueSet.asInstanceOf[List[String]].contains(value)
@@ -372,9 +372,14 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
       Array[SparkEdge]();
     }
 
-    //var inEdges = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => SparkVertexQuery.idCmp(y.inVertexId, vertex.id) ) ).collect();
+    val vert_id = vertex.id;
+    val inEdges = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
+      graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => y.inVertexId == vert_id ) ).collect();
+    } else {
+      Array[SparkEdge]();
+    }
 
-    var edgeSet = outEdges// ++ inEdges;
+    var edgeSet = outEdges ++ inEdges;
     if (labelSet.length > 0) {
       edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
     }
@@ -390,6 +395,12 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
             case _ => edgeSet.filter( _.propMap.getOrElse(has.key, null) != has.value);
           }
         }
+        case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
+          edgeSet.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
+        }
+        case Contains.IN | Contains.NOT_IN => {
+          edgeSet.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null), has.predicate, has.value) )
+        }
         case _ => {
           throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
         }
@@ -397,7 +408,19 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
     }
     return edgeSet.slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Edge]} ).toIterable.asJava;
   }
-
+  def vertices(): Iterable[Vertex] = {
+    var edgeSet = edges().asScala;
+    var nodeIds = edgeSet.map( _.asInstanceOf[SparkEdge] ).map( x => {
+      if ( x.inVertexId == vertex.id ) {
+       (x.outVertexId, true)
+      } else {
+        (x.inVertexId, true)
+      }
+    } ).toSeq;
+    val out = graph.curgraph.context.parallelize(nodeIds).join( graph.curgraph ).map( x => (x._2._2 ) ).collect();
+    return out.map( x => {x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
+  }
+  /*
   def vertices(): Iterable[Vertex] = {
     graph.flushUpdates();
 
@@ -412,10 +435,21 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
       edgeSet.map( x=> new SparkVertex(x.inVertexId, graph) ).toArray;
     }
 
-    //var inEdges = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => SparkVertexQuery.idCmp(y.inVertexId, vertex.id) ) ).collect();
+    val vert_id = vertex.id;
+    val inNodes = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
+      var edgeSet = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => y.inVertexId == vert_id ) ).collect();
+      if (labelSet.length > 0) {
+        edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
+      }
+      edgeSet.map( x => new SparkVertex(x.outVertexId, graph));
+    } else {
+      Array[SparkVertex]();
+    }
 
-    var nodeSet = outNodes// ++ inEdges;
+    var nodeSet = outNodes ++ inNodes;
     for ( has <- hasContainers ) {
+      println("Cycle")
+      println(nodeSet.length)
       nodeSet = has.predicate match {
         case Compare.EQUAL => {
           has.value match {
@@ -440,8 +474,12 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
         }
       }
     }
+    println("Exit")
+    println(nodeSet.length)
     return nodeSet.slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
   }
+  */
+
 }
 
 
