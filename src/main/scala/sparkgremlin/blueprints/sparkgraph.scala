@@ -19,7 +19,7 @@ import scala.util.Random
 
 
 
-class PropertyMapper(val id:AnyRef) extends Serializable {
+class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph) extends Serializable {
 
   val propMap = new HashMap[String,Any]();
 
@@ -58,8 +58,8 @@ class PropertyMapper(val id:AnyRef) extends Serializable {
 
 }
 
-class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:AnyRef, val label:String, @transient inGraph:SparkGraph ) extends PropertyMapper(id) with Edge with Serializable {
-  @transient var graph : SparkGraph = inGraph;
+
+class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:AnyRef, val label:String, @transient inGraph:SparkGraph ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
   def getId: AnyRef = id;
 
   def setGraph(inGraph:SparkGraph) = { graph = inGraph };
@@ -111,8 +111,7 @@ class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:
 
 }
 
-class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends PropertyMapper(id) with Vertex with Serializable {
-  @transient var graph : SparkGraph = inGraph;
+class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends SparkGraphElement(id, inGraph) with Vertex with Serializable {
   val edgeSet = new ArrayBuffer[SparkEdge]();
 
   override def setProperty(key:String, value:AnyRef) = {
@@ -420,65 +419,6 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
     val out = graph.curgraph.context.parallelize(nodeIds).join( graph.curgraph ).map( x => (x._2._2 ) ).collect();
     return out.map( x => {x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
   }
-  /*
-  def vertices(): Iterable[Vertex] = {
-    graph.flushUpdates();
-
-    var nodes = graph.curgraph.lookup(vertex.id);
-    var outNodes = if (nodes.length == 0) {
-      Array[SparkVertex]();
-    } else {
-      var edgeSet = nodes.head.edgeSet;
-      if (labelSet.length > 0) {
-        edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
-      }
-      edgeSet.map( x=> new SparkVertex(x.inVertexId, graph) ).toArray;
-    }
-
-    val vert_id = vertex.id;
-    val inNodes = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
-      var edgeSet = graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => y.inVertexId == vert_id ) ).collect();
-      if (labelSet.length > 0) {
-        edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
-      }
-      edgeSet.map( x => new SparkVertex(x.outVertexId, graph));
-    } else {
-      Array[SparkVertex]();
-    }
-
-    var nodeSet = outNodes ++ inNodes;
-    for ( has <- hasContainers ) {
-      println("Cycle")
-      println(nodeSet.length)
-      nodeSet = has.predicate match {
-        case Compare.EQUAL => {
-          has.value match {
-            case null => nodeSet.filter( !_.propMap.contains(has.key) );
-            case _ => nodeSet.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
-        }
-        case Compare.NOT_EQUAL => {
-          has.value match {
-            case null => nodeSet.filter( _.propMap.contains(has.key));
-            case _ => nodeSet.filter( _.propMap.getOrElse(has.key, null) != has.value);
-          }
-        }
-        case Contains.IN | Contains.NOT_IN => {
-          nodeSet.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
-        }
-        case Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.GREATER_THAN_EQUAL  => {
-          nodeSet.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
-        }
-        case _ => {
-          throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
-        }
-      }
-    }
-    println("Exit")
-    println(nodeSet.length)
-    return nodeSet.slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
-  }
-  */
 
 }
 
@@ -547,7 +487,7 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
           println("Container:" + has.value)
           rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
         }
-        case Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.GREATER_THAN_EQUAL  => {
+        case Compare.GREATER_THAN_EQUAL | Compare.GREATER_THAN  | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
           rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
         }
         case _ => {
@@ -579,7 +519,7 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
         case Contains.IN | Contains.NOT_IN => {
           rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
         }
-        case Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.GREATER_THAN_EQUAL  => {
+        case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL| Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
           rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
         }
         case _ => {
