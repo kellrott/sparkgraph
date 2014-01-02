@@ -16,10 +16,50 @@ import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.Random
 
+trait SparkGraphElementSet[E <: SparkGraphElement] extends java.util.Iterator[E] {
+  def graphRDD() : RDD[(AnyRef,SparkVertex)];
+  def elementRDD() : RDD[E];
+  def flushUpdates() : Boolean;
+}
+
+class SimpleGraphElementSet[E <: SparkGraphElement](var inGraph:SparkGraph, var rdd:RDD[E]) extends SparkGraphElementSet[E] {
+
+  def flushUpdates() : Boolean = inGraph.flushUpdates();
+  def elementRDD(): RDD[E] = rdd;
+  def graphRDD(): RDD[(AnyRef,SparkVertex)] = {
+    flushUpdates();
+    inGraph.curgraph
+  };
+
+  var rddCollect : Array[E] = null;
+  var rddCollectIndex = 0;
+
+  def hasNext: Boolean = {
+    if (rddCollect == null) {
+      rddCollect = rdd.collect();
+      rddCollectIndex = 0;
+    }
+    return rddCollectIndex < rddCollect.length;
+  }
+
+  def next(): E = {
+    if (rddCollect != null) {
+      val out = rddCollect(rddCollectIndex);
+      rddCollectIndex += 1
+      out;
+    } else {
+      null.asInstanceOf[E]
+    }
+  }
+
+  def remove() = {};
+
+}
 
 
+abstract class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph) extends Serializable with Element {
 
-class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph) extends Serializable {
+  def getId: AnyRef = id;
 
   val propMap = new HashMap[String,Any]();
 
@@ -60,7 +100,6 @@ class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph) extends 
 
 
 class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:AnyRef, val label:String, @transient inGraph:SparkGraph ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
-  def getId: AnyRef = id;
 
   def setGraph(inGraph:SparkGraph) = { graph = inGraph };
 
@@ -130,8 +169,6 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
   }
 
   override def hashCode() = id.hashCode
-
-  def getId: java.lang.Object = id;
 
   def remove() = {
     if (graph == null) {
@@ -574,7 +611,7 @@ object SparkGraph {
   }
 }
 
-class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph {
+class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphElementSet[SparkGraphElement] {
 
   var curgraph : RDD[(AnyRef,SparkVertex)] = graph.persist();
   var updates = new ArrayBuffer[BuildElement]();
@@ -697,4 +734,34 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph {
     ).toIterable.asJava;
   }
 
+  var graphCollect : Array[SparkGraphElement] = null;
+  var graphCollectIndex = 0;
+
+  def hasNext: Boolean = {
+    if (graphCollect == null) {
+      graphCollect = elementRDD().collect();
+      graphCollectIndex = 0;
+    }
+    return graphCollectIndex < graphCollect.length;
+  }
+
+  def next(): SparkGraphElement = {
+    if (graphCollect != null) {
+      val out = graphCollect(graphCollectIndex);
+      graphCollectIndex += 1
+      out;
+    } else {
+      null
+    }
+  }
+
+  def remove() = {};
+  def graphRDD(): RDD[(AnyRef, SparkVertex)] = {
+    flushUpdates()
+    curgraph
+  };
+
+  def elementRDD(): RDD[SparkGraphElement] = {
+    return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
+  }
 }

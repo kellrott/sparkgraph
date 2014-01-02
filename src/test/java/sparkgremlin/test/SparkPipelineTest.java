@@ -53,6 +53,7 @@ public class SparkPipelineTest extends TestCase {
     }
     */
 
+    /*
     public void testVertexQueryOptimization() {
         Graph graph = SparkGraphTestFactory.createSparkGraph(sc);
 
@@ -224,7 +225,7 @@ public class SparkPipelineTest extends TestCase {
     }
 
 
-
+           */
 
 
 
