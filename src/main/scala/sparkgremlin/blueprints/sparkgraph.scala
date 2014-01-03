@@ -16,13 +16,13 @@ import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.Random
 
-trait SparkGraphElementSet[E <: SparkGraphElement] extends java.util.Iterator[E] {
+trait SparkGraphElementSet[E <: Element] extends java.util.Iterator[E] with java.lang.Iterable[E] {
   def graphRDD() : RDD[(AnyRef,SparkVertex)];
   def elementRDD() : RDD[E];
   def flushUpdates() : Boolean;
 }
 
-class SimpleGraphElementSet[E <: SparkGraphElement](var inGraph:SparkGraph, var rdd:RDD[E]) extends SparkGraphElementSet[E] {
+class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]) extends SparkGraphElementSet[E] {
 
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
@@ -43,10 +43,14 @@ class SimpleGraphElementSet[E <: SparkGraphElement](var inGraph:SparkGraph, var 
   }
 
   def next(): E = {
+    if (!hasNext) {
+      return null.asInstanceOf[E];
+    }
     if (rddCollect != null) {
-      val out = rddCollect(rddCollectIndex);
+      val out = rddCollect(rddCollectIndex).asInstanceOf[SparkGraphElement];
+      out.graph = inGraph
       rddCollectIndex += 1
-      out;
+      out.asInstanceOf[E];
     } else {
       null.asInstanceOf[E]
     }
@@ -54,6 +58,10 @@ class SimpleGraphElementSet[E <: SparkGraphElement](var inGraph:SparkGraph, var 
 
   def remove() = {};
 
+  def iterator(): java.util.Iterator[E] = {
+    rddCollect = null;
+    this
+  };
 }
 
 
@@ -105,6 +113,7 @@ class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:
 
   override def equals(other: Any) = other match {
     case that: SparkEdge => (this.id == that.id)
+    case that: Edge => (this.id == that.getId)
     case _ => false
   }
 
@@ -703,36 +712,34 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
   }
 
   def getEdges: Iterable[Edge] = {
-    flushUpdates()
-    return curgraph.flatMap( x => x._2.edgeSet ).collect.map( x => {
-      x.graph = this;
-      x.asInstanceOf[Edge]
-    }
-    ).toIterable.asJava;
+    flushUpdates();
+    val out = curgraph.flatMap( x => x._2.edgeSet );
+    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[Edge]));
   }
 
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
-    flushUpdates()
-    return curgraph.flatMap( x => x._2.edgeSet ).filter( _.labelMatch(key, value.toString) ).collect.map( x => {
-      x.graph = this;
-      x.asInstanceOf[Edge]
-    }
-    ).toIterable.asJava;
+    flushUpdates();
+    val out = curgraph.flatMap( x => x._2.edgeSet ).filter( _.labelMatch(key, value.toString) );
+    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[Edge]));
   }
 
   def query(): GraphQuery = {
     return new SparkGraphQuery(this);
   }
 
-  def getVertices: Iterable[Vertex] = {
+  def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
+    return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ) );
+    /*
     return curgraph.map(x => x._2.asInstanceOf[Vertex]).collect().map( x => {
       val y = x.asInstanceOf[SparkVertex];
       y.graph = this;
       y.asInstanceOf[Vertex]
     }
-    ).toIterable.asJava;
+    ).toIterable.asJava;  */
   }
+
+  def iterator(): java.util.Iterator[SparkGraphElement] = this;
 
   var graphCollect : Array[SparkGraphElement] = null;
   var graphCollectIndex = 0;

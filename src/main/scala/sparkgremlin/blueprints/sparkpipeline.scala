@@ -1,8 +1,8 @@
 package sparkgremlin.blueprints
 
 import com.tinkerpop.blueprints._
-import com.tinkerpop.pipes.util.{PipeHelper, Pipeline}
-import com.tinkerpop.pipes.{AbstractPipe, Pipe, IdentityPipe, PipeFunction}
+import com.tinkerpop.pipes.util.PipeHelper
+import com.tinkerpop.pipes.{AbstractPipe, Pipe, PipeFunction}
 import com.tinkerpop.pipes.util.structures.{Row, Pair, Table, Tree}
 import java.util.Map
 import java.util.List
@@ -10,16 +10,14 @@ import java.util.Map.Entry
 import com.tinkerpop.pipes.transform.TransformPipe.Order
 import com.tinkerpop.gremlin.Tokens
 import java.lang._
-import org.apache.spark.rdd.RDD
 import org.apache.spark.rdd._
 import org.apache.spark.SparkContext._
 
 import collection.JavaConverters._
-import scala.collection.mutable.MutableList
 import com.tinkerpop.pipes.branch.LoopPipe.LoopBundle
-import com.tinkerpop.gremlin.java.{GremlinFluentUtility, GremlinFluentPipeline}
 import com.tinkerpop.pipes.util.iterators.HistoryIterator
-import scala.RuntimeException
+import java.lang.RuntimeException
+import scala.collection.mutable.ArrayBuffer
 
 object SparkPipelineException {
   val NON_READER: String = "Bulk Pipeline Step does not implement reader"
@@ -108,19 +106,19 @@ class SparkGremlinStartPipe[E <: SparkGraphElement](startGraph : SparkGraphEleme
 
 
 class GremlinState(val startVertexID:AnyRef) extends Serializable {
-
+  var validEdges : ArrayBuffer[AnyRef] = null;
 }
 
 class SparkGraphBulkData[E <: SparkGraphElement](val graphData : SparkGraphElementSet[E], val graphState : RDD[(AnyRef, GremlinState)], val elementClass : Class[_]) extends BulkPipeData[E] {
 
   def extract() : Iterator[E] = {
     if (elementClass == classOf[SparkVertex]) {
-      println("GremlinCount:" + graphState.count())
       val out = graphData.graphRDD().join( graphState ).map( x => x._2._1 );
       return out.collect().toIterator.asInstanceOf[Iterator[E]];
     }
     if (elementClass == classOf[SparkEdge]) {
-      return graphData.graphRDD().flatMap(_._2.edgeSet).collect().toIterator.asInstanceOf[Iterator[E]];
+      val validEdges = graphState.flatMap( x => x._2.validEdges.map( x => (x, true)) )
+      return graphData.graphRDD().flatMap(_._2.edgeSet.map( x => (x.id, x) )).join( validEdges ).map( _._2._1 ).collect().toIterator.asInstanceOf[Iterator[E]];
     }
     return null;
   }
@@ -213,7 +211,13 @@ object SparkGremlinPipeline {
 class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipelineBase[S, E] {
 
   pipes = new java.util.ArrayList[Pipe[_, _]]();
-  if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
+  if (start.isInstanceOf[SparkGraphElementSet[SparkVertex]]) {
+    pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
+    pipes.add(new SparkGraphQueryPipe[SparkVertex](classOf[SparkVertex]));
+  } else if (start.isInstanceOf[SparkGraphElementSet[SparkEdge]]) {
+    pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
+    pipes.add(new SparkGraphQueryPipe[SparkEdge](classOf[SparkEdge]));
+  } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
     pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkGraphElement]]));
   } else {
     throw new RuntimeException("Unable to init pipeline")
@@ -238,14 +242,13 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     */
   def V: SparkGremlinPipeline[S, SparkVertex] = {
     add( new SparkGraphQueryPipe[SparkVertex](classOf[SparkVertex]) )
-    //throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
   }
 
 
   /**
     */
-  def E: SparkGremlinPipeline[S, Edge] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+  def E: SparkGremlinPipeline[S, SparkEdge] = {
+    add( new SparkGraphQueryPipe[SparkEdge](classOf[SparkEdge]) )
   }
 
   def step(function: PipeFunction[_, _]): SparkGremlinPipeline[S, _] = {

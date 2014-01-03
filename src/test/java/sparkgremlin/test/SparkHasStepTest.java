@@ -8,9 +8,7 @@ import org.apache.spark.SparkContext;
 import java.util.Arrays;
 import sparkgremlin.blueprints.SparkGremlinPipeline;
 
-/**
- * @author Marko A. Rodriguez (http://markorodriguez.com)
- */
+
 public class SparkHasStepTest extends com.tinkerpop.gremlin.test.filter.HasStepTest {
 
     SparkContext sc = null;
@@ -33,10 +31,6 @@ public class SparkHasStepTest extends com.tinkerpop.gremlin.test.filter.HasStepT
                 Thread.sleep(1000);
             } catch (InterruptedException e) { }
         }
-    }
-
-    public void testCompliance() {
-        ComplianceTest.testCompliance(this.getClass());
     }
 
 
