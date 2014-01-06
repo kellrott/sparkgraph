@@ -45,7 +45,6 @@ abstract class BulkPipe[S,E] extends AbstractPipe[S,E] {
   var collectedOutput : Iterator[E] = null;
 
   override def setStarts(starts: java.util.Iterator[S]) = {
-    println("Starting:" + starts)
     if (starts.isInstanceOf[BulkPipe[_,S]]) {
       this.starts = null
       this.bulkStartPipe = starts.asInstanceOf[BulkPipe[_,S]];
@@ -105,8 +104,14 @@ class SparkGremlinStartPipe[E <: SparkGraphElement](startGraph : SparkGraphEleme
 }
 
 
-class GremlinState(val startVertexID:AnyRef) extends Serializable {
-  var validEdges : ArrayBuffer[AnyRef] = null;
+class GremlinState extends Serializable {
+  def this(vertex:SparkVertex) = {
+    this()
+    startVertex = vertex.id;
+    validEdges = vertex.edgeSet.map( _.id ).toArray
+  }
+  var validEdges : Array[AnyRef] = null;
+  var startVertex : AnyRef = null;
 }
 
 class SparkGraphBulkData[E <: SparkGraphElement](val graphData : SparkGraphElementSet[E], val graphState : RDD[(AnyRef, GremlinState)], val elementClass : Class[_]) extends BulkPipeData[E] {
@@ -136,7 +141,7 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : Class[_]) extends BulkPi
 
   def bulkProcess() : BulkPipeData[E] = {
     val y = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
-    val out = y.createStep( y.graphData.graphRDD().map( x => (x._1, new GremlinState(x._1)) ), cls );
+    val out = y.createStep( y.graphData.graphRDD().map( x => (x._1, new GremlinState(x._2)) ), cls );
     return out;
   }
 
@@ -144,15 +149,31 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : Class[_]) extends BulkPi
 
 
 object SparkPropertyFilterPipe  {
-  def filterVertex( verts : Seq[SparkVertex], states : Seq[GremlinState], key:String, predicate : Predicate, value : AnyRef ) : Boolean = {
-    val state = states.head
-    val vert = verts.head
+  def filterVertex( vert : SparkVertex, state : GremlinState, key:String, predicate : Predicate, value : AnyRef ) : Boolean = {
     return predicate.evaluate(vert.getProperty(key), value)
   }
+
+  def filterEdges( vert: SparkVertex, state : GremlinState, key:String, predicate: Predicate, value: AnyRef) : GremlinState = {
+    val newState = new GremlinState();
+    newState.startVertex = state.startVertex
+    newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.getProperty(key), value) ).map( _.id ).toArray
+    return newState;
+  }
+
+  def filterEdgesLabels( vert: SparkVertex, state : GremlinState, key:String, predicate: Predicate, value: AnyRef) : GremlinState = {
+    val newState = new GremlinState();
+    newState.startVertex = state.startVertex
+    newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id ).toArray
+    return newState;
+  }
+
+
 }
 
 class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElement] {
 
+  val id : AnyRef = null;
+  val label : String = null;
   var key : String = null;
   var value: AnyRef = null
   var predicate: Predicate = null
@@ -173,32 +194,43 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
     throw new SparkPipelineException(SparkPipelineException.NON_READER);
   }
   def bulkProcess() : SparkGraphBulkData[SparkGraphElement] = {
-      val y = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkGraphElement]];
-      val searchKey = key;
-      val searchPredicate = predicate;
-      val searchValue = value
+    val y = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkGraphElement]];
+    val searchKey = key;
+    val searchPredicate = predicate;
+    val searchValue = value
 
-      val step = y.graphState.cogroup( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
-      y.createStep( step.map( x => (x._1, x._2._1.head) ), y.elementClass )
+    if (y.elementClass == classOf[SparkVertex]) {
+      val step = y.graphState.join( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
+      return y.createStep( step.map( x => (x._1, x._2._1) ), y.elementClass )
+    }
+    if (y.elementClass == classOf[SparkEdge]) {
+      val step = if (label != null || key == "label") {
+        y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
+      } else {
+        y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdges(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
+      }
+      return y.createStep( step, y.elementClass );
+    }
+    return null;
   }
 }
 
 class SparkIdFilterPipe extends SparkPropertyFilterPipe {
-  var id : AnyRef = null;
-  def this(predicate: Predicate, id: AnyRef) {
+  def this(predicate: Predicate, value: AnyRef) {
     this()
-    this.id = id
+    this.key = "id"
+    this.value = value
     this.predicate = predicate
   }
 }
 
 
 class SparkLabelFilterPipe extends SparkPropertyFilterPipe {
-  var id : AnyRef = null;
-  def this(predicate: Predicate, id: AnyRef) {
+  def this(predicate: Predicate, value: AnyRef) {
     this()
-    this.id = id
+    this.value = value
     this.predicate = predicate
+    this.key = "label"
   }
 }
 
@@ -219,6 +251,8 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     pipes.add(new SparkGraphQueryPipe[SparkEdge](classOf[SparkEdge]));
   } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
     pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkGraphElement]]));
+  } else if (start.isInstanceOf[SparkVertex]) {
+    throw new RuntimeException("Needs to be written")
   } else {
     throw new RuntimeException("Unable to init pipeline")
   }
@@ -570,6 +604,10 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def outE(branchFactor: Int, labels: String*): SparkGremlinPipeline[S, Edge] = {
+    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+  }
+
+  def out() : SparkGremlinPipeline[S, Vertex] = {
     throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
   }
 

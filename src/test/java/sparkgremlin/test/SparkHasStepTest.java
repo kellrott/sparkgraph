@@ -49,12 +49,10 @@ public class SparkHasStepTest extends com.tinkerpop.gremlin.test.filter.HasStepT
         super.test_g_V_hasXblahX(new SparkGremlinPipeline(g).V().optimize(false).has("blah"));
     }
 
-    /*
     public void test_g_v1_out_hasXid_2X() {
         super.test_g_v1_out_hasXid_2X(new SparkGremlinPipeline(g.getVertex(1)).out().has("id", "2"));
         super.test_g_v1_out_hasXid_2X(new SparkGremlinPipeline(g.getVertex(1)).optimize(false).out().has("id", "2"));
     }
-    */
 
     public void test_g_V_hasXage_gt_30X() {
         super.test_g_V_hasXage_gt_30X(new SparkGremlinPipeline(g).V().has("age", T.gt, 30));

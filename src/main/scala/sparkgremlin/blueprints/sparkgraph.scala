@@ -663,12 +663,21 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
       throw new IllegalArgumentException();
     }
     flushUpdates();
-    val set = curgraph.lookup(id);
-    if (set.length > 0) {
-      val out = set.head;
-      out.graph = this;
-      return out;
+    try {
+      val lid : java.lang.Long = id match {
+        case x : java.lang.Long => id.asInstanceOf[java.lang.Long]
+        case _ => id.toString.toLong
+      }
+      val set = curgraph.lookup(lid);
+      if (set.length > 0) {
+        val out = set.head;
+        out.graph = this;
+        return out;
+      }
+    } catch {
+      case _ : java.lang.NumberFormatException => return null;
     }
+
     return null;
   }
 
@@ -679,15 +688,19 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
   }
 
   def removeVertex(vertex: Vertex) {
-    //println("Remove: " + vertex.getId )
     updates += new VertexRemoveBuild(vertex.getId);
   }
 
   def addVertex(id: scala.AnyRef): Vertex =  {
-    //println("Add Vertex: " + id)
-    val u : AnyRef = id match {
-      case null => (new java.lang.Long(Random.nextLong())).toString;
-      case _ => id;
+    val u : java.lang.Long = id match {
+      case null => new java.lang.Long(Random.nextLong()); //(new java.lang.Long(Random.nextLong())).toString;
+      case _ => {
+        try {
+          id.toString.toLong
+        } catch {
+          case _ : java.lang.NumberFormatException => new java.lang.Long(Random.nextLong())
+        }
+      }
     }
     updates += new VertexBuild(u);
     return new SparkVertex(u, this);
@@ -730,13 +743,6 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
     return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ) );
-    /*
-    return curgraph.map(x => x._2.asInstanceOf[Vertex]).collect().map( x => {
-      val y = x.asInstanceOf[SparkVertex];
-      y.graph = this;
-      y.asInstanceOf[Vertex]
-    }
-    ).toIterable.asJava;  */
   }
 
   def iterator(): java.util.Iterator[SparkGraphElement] = this;
