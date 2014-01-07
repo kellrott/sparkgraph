@@ -20,10 +20,12 @@ trait SparkGraphElementSet[E <: Element] extends java.util.Iterator[E] with java
   def graphRDD() : RDD[(AnyRef,SparkVertex)];
   def elementRDD() : RDD[E];
   def flushUpdates() : Boolean;
+  def getElementClass() : Class[_];
 }
 
-class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]) extends SparkGraphElementSet[E] {
+class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E], elementClass : Class[_]) extends SparkGraphElementSet[E] {
 
+  def getElementClass() : Class[_] = elementClass;
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
   def graphRDD(): RDD[(AnyRef,SparkVertex)] = {
@@ -727,13 +729,13 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
   def getEdges: Iterable[Edge] = {
     flushUpdates();
     val out = curgraph.flatMap( x => x._2.edgeSet );
-    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[Edge]));
+    return new SimpleGraphElementSet[SparkEdge](this, out, classOf[SparkEdge]).asInstanceOf[Iterable[Edge]];
   }
 
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
     val out = curgraph.flatMap( x => x._2.edgeSet ).filter( _.labelMatch(key, value.toString) );
-    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[Edge]));
+    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[SparkEdge]), classOf[SparkEdge]);
   }
 
   def query(): GraphQuery = {
@@ -742,8 +744,10 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
 
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ) );
+    return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ), classOf[SparkVertex] );
   }
+
+  def getElementClass() : Class[_] = classOf[SparkVertex];
 
   def iterator(): java.util.Iterator[SparkGraphElement] = this;
 

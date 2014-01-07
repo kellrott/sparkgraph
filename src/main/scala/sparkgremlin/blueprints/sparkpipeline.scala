@@ -160,7 +160,7 @@ object SparkPropertyFilterPipe  {
     return newState;
   }
 
-  def filterEdgesLabels( vert: SparkVertex, state : GremlinState, key:String, predicate: Predicate, value: AnyRef) : GremlinState = {
+  def filterEdgesLabels( vert: SparkVertex, state : GremlinState, predicate: Predicate, value: AnyRef) : GremlinState = {
     val newState = new GremlinState();
     newState.startVertex = state.startVertex
     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id ).toArray
@@ -197,16 +197,22 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
     val y = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkGraphElement]];
     val searchKey = key;
     val searchPredicate = predicate;
-    val searchValue = value
 
     if (y.elementClass == classOf[SparkVertex]) {
+      val searchValue = value
       val step = y.graphState.join( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
       return y.createStep( step.map( x => (x._1, x._2._1) ), y.elementClass )
     }
     if (y.elementClass == classOf[SparkEdge]) {
       val step = if (label != null || key == "label") {
-        y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
+        val searchValue = if (label != null) {
+          label;
+        } else {
+          value ;
+        }
+        y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._2, x._2._1, searchPredicate, searchValue)) );
       } else {
+        val searchValue = value
         y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdges(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
       }
       return y.createStep( step, y.elementClass );
@@ -243,16 +249,24 @@ object SparkGremlinPipeline {
 class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipelineBase[S, E] {
 
   pipes = new java.util.ArrayList[Pipe[_, _]]();
-  if (start.isInstanceOf[SparkGraphElementSet[SparkVertex]]) {
-    pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
-    pipes.add(new SparkGraphQueryPipe[SparkVertex](classOf[SparkVertex]));
-  } else if (start.isInstanceOf[SparkGraphElementSet[SparkEdge]]) {
-    pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
-    pipes.add(new SparkGraphQueryPipe[SparkEdge](classOf[SparkEdge]));
+  if (start.isInstanceOf[SparkGraphElementSet[_]]) {
+    val sparkElementSet = start.asInstanceOf[SparkGraphElementSet[_]];
+    if (sparkElementSet.getElementClass() == classOf[SparkVertex]) {
+      pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
+      pipes.add(new SparkGraphQueryPipe[SparkVertex](classOf[SparkVertex]));
+
+    } else if (sparkElementSet.getElementClass() == classOf[SparkEdge]) {
+      pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
+      pipes.add(new SparkGraphQueryPipe[SparkEdge](classOf[SparkEdge]));
+    }
   } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
     pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkGraphElement]]));
   } else if (start.isInstanceOf[SparkVertex]) {
-    throw new RuntimeException("Needs to be written")
+    val sparkStart = start.asInstanceOf[SparkVertex]
+    val startID = sparkStart.getId
+    val startRDD = sparkStart.graph.curgraph.filter( x => x._1 == startID  ).map(_._2);
+    pipes.add(new SparkGremlinStartPipe(new SimpleGraphElementSet[SparkVertex](sparkStart.graph, startRDD, classOf[SparkVertex])));
+    pipes.add(new SparkGraphQueryPipe[SparkVertex](classOf[SparkVertex]));
   } else {
     throw new RuntimeException("Unable to init pipeline")
   }
