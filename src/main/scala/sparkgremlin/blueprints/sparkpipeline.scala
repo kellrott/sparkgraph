@@ -18,6 +18,7 @@ import com.tinkerpop.pipes.branch.LoopPipe.LoopBundle
 import com.tinkerpop.pipes.util.iterators.HistoryIterator
 import java.lang.RuntimeException
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 object SparkPipelineException {
   val NON_READER: String = "Bulk Pipeline Step does not implement reader"
@@ -103,15 +104,28 @@ class SparkGremlinStartPipe[E <: SparkGraphElement](startGraph : SparkGraphEleme
   def bulkProcess(): BulkPipeData[E] = bulkStarts
 }
 
+object GremlinState {
+  def merge(a: GremlinState, b:GremlinState) : GremlinState = {
+    val out = new GremlinState();
+    out.startVertices = a.startVertices ++ b.startVertices;
+    return out;
+  }
+  def clearEdges(a: GremlinState, b:SparkVertex) : GremlinState = {
+    val out = new GremlinState();
+    out.startVertices = a.startVertices;
+    out.validEdges = b.edgeSet.map( _.id ).toArray;
+    return out;
+  }
+}
 
 class GremlinState extends Serializable {
   def this(vertex:SparkVertex) = {
     this()
-    startVertex = vertex.id;
+    startVertices = Array(vertex.id);
     validEdges = vertex.edgeSet.map( _.id ).toArray
   }
   var validEdges : Array[AnyRef] = null;
-  var startVertex : AnyRef = null;
+  var startVertices : Array[AnyRef] = null;
 }
 
 class SparkGraphBulkData[E <: SparkGraphElement](val graphData : SparkGraphElementSet[E], val graphState : RDD[(AnyRef, GremlinState)], val elementClass : Class[_]) extends BulkPipeData[E] {
@@ -153,19 +167,40 @@ object SparkPropertyFilterPipe  {
     return predicate.evaluate(vert.getProperty(key), value)
   }
 
+  def filterVertexID( vert:SparkVertex, state: GremlinState, predicate: Predicate, value: AnyRef) : Boolean = {
+    val vid : java.lang.Long = value match {
+      case x : java.lang.Long => x;
+      case _ => value.toString.toLong
+    }
+    val out = predicate.evaluate(vert.id, vid);
+    return out;
+  }
+
   def filterEdges( vert: SparkVertex, state : GremlinState, key:String, predicate: Predicate, value: AnyRef) : GremlinState = {
     val newState = new GremlinState();
-    newState.startVertex = state.startVertex
+    newState.startVertices = state.startVertices
     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.getProperty(key), value) ).map( _.id ).toArray
     return newState;
   }
 
   def filterEdgesLabels( vert: SparkVertex, state : GremlinState, predicate: Predicate, value: AnyRef) : GremlinState = {
     val newState = new GremlinState();
-    newState.startVertex = state.startVertex
+    newState.startVertices = state.startVertices
     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id ).toArray
     return newState;
   }
+
+  def filterEdgesID( vert:SparkVertex, state: GremlinState, predicate: Predicate, value: AnyRef) : GremlinState = {
+    val newState = new GremlinState();
+    val vid : java.lang.Long = value match {
+      case x : java.lang.Long => x;
+      case _ => value.toString.toLong
+    }
+    newState.startVertices = state.startVertices
+    newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.id, vid) ).map( _.id ).toArray
+    return newState;
+  }
+
 
 
 }
@@ -193,15 +228,26 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
   def bulkReader(input: java.util.Iterator[SparkGraphElement]) : BulkPipeData[SparkGraphElement] = {
     throw new SparkPipelineException(SparkPipelineException.NON_READER);
   }
+
   def bulkProcess() : SparkGraphBulkData[SparkGraphElement] = {
     val y = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkGraphElement]];
     val searchKey = key;
     val searchPredicate = predicate;
 
     if (y.elementClass == classOf[SparkVertex]) {
-      val searchValue = value
-      val step = y.graphState.join( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
-      return y.createStep( step.map( x => (x._1, x._2._1) ), y.elementClass )
+      if (this.id != null || this.key == "id") {
+        val searchValue = if (id != null) {
+          this.id
+        } else {
+          this.value
+        }
+        val step = y.graphState.join( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertexID(x._2._2, x._2._1, searchPredicate, searchValue ))
+        return y.createStep( step.map( x => (x._1, x._2._1) ), y.elementClass )
+      } else {
+        val searchValue = value
+        val step = y.graphState.join( y.graphData.graphRDD() ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
+        return y.createStep( step.map( x => (x._1, x._2._1) ), y.elementClass )
+      }
     }
     if (y.elementClass == classOf[SparkEdge]) {
       val step = if (label != null || key == "label") {
@@ -211,6 +257,13 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
           value ;
         }
         y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._2, x._2._1, searchPredicate, searchValue)) );
+      } else if (id != null || key == "id") {
+        val searchValue = if (id != null) {
+          id;
+        } else {
+          value;
+        }
+        y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesID(x._2._2, x._2._1, searchPredicate, searchValue)) );
       } else {
         val searchValue = value
         y.graphState.join( y.graphData.graphRDD() ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdges(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
@@ -240,6 +293,22 @@ class SparkLabelFilterPipe extends SparkPropertyFilterPipe {
   }
 }
 
+
+class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int, val labels:Array[String]) extends BulkPipe[S,SparkVertex] {
+  def bulkReader(input: java.util.Iterator[S]): BulkPipeData[S] = {
+    throw new SparkPipelineException(SparkPipelineException.NON_READER);
+  }
+
+  def bulkProcess(): BulkPipeData[SparkVertex] = {
+    //pretty sure this is the least optimal way to do things
+    val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
+    val edges = bs.graphData.graphRDD().map( x => (x._1, x._2.edgeSet.map(y => y.inVertexId) ) );
+    val n = edges.join( bs.graphState ).flatMap( x => x._2._1.map( y => (y, x._2._2)) );
+    val reduced = n.reduceByKey( (x,y) => GremlinState.merge(x, y) );
+    val out = reduced.join( bs.graphData.graphRDD() ).map( x => (x._1, GremlinState.clearEdges( x._2._1, x._2._2 ) ) );
+    return bs.createStep(out, classOf[SparkVertex]);
+  }
+}
 
 
 object SparkGremlinPipeline {
@@ -622,15 +691,15 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def out() : SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphConnectedVertex(Direction.OUT, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
   def out(labels: String*): SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.out(Integer.MAX_VALUE, labels:_*)
   }
 
   def out(branchFactor: Int, labels: String*): SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphConnectedVertex(Direction.OUT, branchFactor, labels.toArray)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
   def outV(): SparkGremlinPipeline[S, Vertex] = {

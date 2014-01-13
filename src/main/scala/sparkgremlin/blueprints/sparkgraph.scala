@@ -695,6 +695,7 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
 
   def addVertex(id: scala.AnyRef): Vertex =  {
     val u : java.lang.Long = id match {
+      case x : java.lang.Long => x;
       case null => new java.lang.Long(Random.nextLong()); //(new java.lang.Long(Random.nextLong())).toString;
       case _ => {
         try {
