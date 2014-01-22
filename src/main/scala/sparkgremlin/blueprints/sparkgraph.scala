@@ -16,16 +16,19 @@ import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.Random
 
-trait SparkGraphElementSet[E <: Element] extends java.util.Iterator[E] with java.lang.Iterable[E] {
-  def graphRDD() : RDD[(AnyRef,SparkVertex)];
+trait RDDKeySet[E] extends java.util.Iterator[E] with java.lang.Iterable[E] {
   def elementRDD() : RDD[E];
-  def flushUpdates() : Boolean;
-  def getElementClass() : Class[_];
+  def elementClass() : Class[_];
 }
 
-class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E], elementClass : Class[_]) extends SparkGraphElementSet[E] {
+trait SparkGraphElementSet[E <: Element] extends RDDKeySet[E] {
+  def graphRDD() : RDD[(AnyRef,SparkVertex)];
+  //def flushUpdates() : Boolean;
+}
 
-  def getElementClass() : Class[_] = elementClass;
+class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E], inElementClass : Class[_]) extends SparkGraphElementSet[E] {
+
+  def elementClass() : Class[_] = inElementClass;
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
   def graphRDD(): RDD[(AnyRef,SparkVertex)] = {
@@ -748,7 +751,7 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
     return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ), classOf[SparkVertex] );
   }
 
-  def getElementClass() : Class[_] = classOf[SparkVertex];
+  def elementClass() : Class[_] = classOf[SparkVertex];
 
   def iterator(): java.util.Iterator[SparkGraphElement] = this;
 
@@ -780,6 +783,7 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
   };
 
   def elementRDD(): RDD[SparkGraphElement] = {
-    return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
+    //return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
+    return graphRDD().map( _._2 )
   }
 }
