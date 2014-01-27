@@ -21,7 +21,7 @@ trait RDDKeySet[E] extends java.util.Iterator[E] with java.lang.Iterable[E] {
   def elementClass() : Class[_];
 }
 
-trait SparkGraphElementSet[E <: Element] extends RDDKeySet[E] {
+trait SparkGraphElementSet[E] extends RDDKeySet[E] {
   def graphRDD() : RDD[(AnyRef,SparkVertex)];
   //def flushUpdates() : Boolean;
 }
