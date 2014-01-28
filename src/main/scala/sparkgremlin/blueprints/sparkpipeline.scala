@@ -92,7 +92,7 @@ trait BulkSideEffectPipe[S,T] extends BulkPipe[S,S] {
 
 
 object GremlinTraveler {
-  def addAsColumn(t: GremlinTraveler, name:String, element: SparkGraphElement) : GremlinTraveler = {
+  def addAsColumn(t: GremlinTraveler, name:String, element: AnyRef) : GremlinTraveler = {
     val out = new GremlinTraveler();
     out.asColumnMap = if (t.asColumnMap != null) {
       (t.asColumnMap ++ Map[String,GremlinGraphLocation](name -> new GremlinGraphLocation(element)));
@@ -104,7 +104,7 @@ object GremlinTraveler {
 }
 
 class GremlinGraphLocation extends  Serializable {
-  def this(element: SparkGraphElement) = {
+  def this(element: AnyRef) = {
     this();
     value = element;
   }
@@ -131,7 +131,7 @@ object GremlinVertex {
     return out;
   }
 
-  def addAsColumn(a: GremlinVertex, name: String, element : SparkGraphElement) : GremlinVertex = {
+  def addAsColumn(a: GremlinVertex, name: String, element : AnyRef) : GremlinVertex = {
     val out = new GremlinVertex()
     out.travelerCount = a.travelerCount;
     out.travelers = if (a.travelers != null) {
@@ -424,7 +424,14 @@ class SparkGraphAsPipe[S,E](name: String) extends BulkPipe[S,E] {
   def bulkProcess(): BulkPipeData[E] = {
     val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
     val tname = name;
-    val out = bs.graphData.graphRDD().join( bs.graphState ).map( x => (x._1, GremlinVertex.addAsColumn( x._2._2, tname, x._2._1 )) );
+    val stateRDD = bs.graphData.graphRDD().join( bs.graphState );
+    val tkey = bs.extractKey;
+    val out = bs.elementType match {
+      case BulkDataType.VERTEX_DATA => stateRDD.map( x => (x._1, GremlinVertex.addAsColumn( x._2._2, tname, x._2._1 )) );
+      case BulkDataType.VERTEX_PROP_DATA => stateRDD.map( x => (x._1, GremlinVertex.addAsColumn( x._2._2, tname, x._2._1.getProperty(tkey) )) )
+      case _ => throw new RuntimeException("Don't know what to do here")
+    }
+
     if (bs.asColumns != null ) {
       //return bs.createStep(out, bs.asColumns ++ Array(name), bs.elementType);
       return new SparkGraphBulkData[E](bs.graphData, out, bs.asColumns ++ Array(name), bs.elementType, bs.extractKey) {
@@ -440,35 +447,48 @@ class SparkGraphAsPipe[S,E](name: String) extends BulkPipe[S,E] {
 
 
 
-class SparkGraphPropertyPipe[S](name:String) extends BulkPipe[S,AnyRef] {
+class SparkGraphPropertyPipe[S <: SparkGraphElement](name:String) extends BulkPipe[S,AnyRef] {
   def bulkReader(input: java.util.Iterator[S]): BulkPipeData[S] = {
     throw new SparkPipelineException(SparkPipelineException.NON_READER);
   }
 
   def bulkProcess(): BulkPipeData[AnyRef] = {
-    val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]];
-    //bs.
-    throw new RuntimeException("I have no idea what to do here");
+    val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkGraphElement]];
+    val elType = bs.elementType match {
+      case BulkDataType.VERTEX_DATA => BulkDataType.VERTEX_PROP_DATA
+      case BulkDataType.EDGE_DATA => BulkDataType.VERTEX_PROP_DATA
+    }
+    return new SparkGraphBulkData[AnyRef](
+      bs.graphData, bs.graphState, bs.asColumns, elType, name
+    ) {
+      override def currentRDD(): RDD[AnyRef] = bs.currentRDD().map( _.getProperty(name) )
+    }
   }
 }
 
 
-class SparkGraphTablePipe[S](table: Table, columnFunctions: SparkGremlinPipelineBase.PipeFunctionWrapper) extends BulkSideEffectPipe[S,Table] {
+class SparkGraphTablePipe[S](var table: Table, columnFunctions: SparkGremlinPipelineBase.PipeFunctionWrapper) extends BulkSideEffectPipe[S,Table] {
   def bulkReader(input: java.util.Iterator[S]): BulkPipeData[S] = {
     throw new SparkPipelineException(SparkPipelineException.NON_READER);
   }
 
   def bulkProcess(): BulkPipeData[S] = {
     var currentFunction = 0;
-
+    if (table == null) {
+      table = new Table();
+    }
     val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[S]];
     table.setColumnNames(bs.asColumns:_*);
     val data = bs.graphState.filter(_._2.travelers != null ).flatMap( _._2.travelers ).collect()
       data.foreach( x => {
       val y = bs.asColumns.map( z => x.asColumnMap(z) );
-      val row = columnFunctions.rowCalc(currentFunction, new java.util.ArrayList(y.map(_.value).toList.asJava) );
-      currentFunction += y.length;
-      table.addRow(row)
+      if (columnFunctions != null) {
+        val row = columnFunctions.rowCalc(currentFunction, new java.util.ArrayList(y.map(_.value).toList.asJava) );
+        currentFunction += y.length;
+        table.addRow(row)
+      } else {
+        table.addRow(y.map(_.value):_*);
+      }
     } )
     return bulkStarts;
   }
