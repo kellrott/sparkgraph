@@ -2,7 +2,7 @@ import AssemblyKeys._ // put this at the top of the file
 
 name := "SparkGremlin"
 
-version := "1.0"
+version := "0.1"
 
 scalaVersion := "2.9.3"
 

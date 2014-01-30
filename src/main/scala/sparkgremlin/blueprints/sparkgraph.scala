@@ -143,15 +143,20 @@ class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:
 
   def getVertex(direction: Direction): Vertex = {
     if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
+      if (direction == Direction.IN) {
+        return new SparkVertex(inVertexId, null);
+      } else if (direction == Direction.OUT) {
+        return new SparkVertex(outVertexId, null);
+      }
+      throw new IllegalArgumentException("Bad Edge Direction")
+    } else {
+      if (direction == Direction.IN) {
+        return graph.getVertex(inVertexId);
+      } else if (direction == Direction.OUT) {
+        return graph.getVertex(outVertexId);
+      }
+      throw new IllegalArgumentException("Bad Edge Direction")
     }
-    val out = new ArrayBuffer[Vertex]();
-    if (direction == Direction.IN) {
-      return graph.getVertex(inVertexId);
-    } else if (direction == Direction.OUT) {
-      return graph.getVertex(outVertexId);
-    }
-    throw new IllegalArgumentException("Bad Edge Direction")
   }
 
   override def labelMatch(args:String*) : Boolean = {
@@ -192,15 +197,19 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
   }
 
   def addEdge(label: String, inVertex: Vertex): Edge = {
-    if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
-    }
+    //if (graph == null) {
+    //  throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
+    //}
     if (label == null) {
-      throw new IllegalArgumentException("Adding unlabed edge");
+      throw new IllegalArgumentException("Cannot add unlabeled edge");
     }
     val edgeId = new java.lang.Long(Random.nextLong());
-    graph.updates += new EdgeBuild(edgeId, id, inVertex.getId, label);
-    return new SparkEdge(edgeId, id, inVertex.getId, label, graph);
+    if (graph != null) {
+      graph.updates += new EdgeBuild(edgeId, id, inVertex.getId, label);
+    }
+    val e = new SparkEdge(edgeId, id, inVertex.getId, label, graph);
+    edgeSet += e;
+    return e;
   }
 
   def query(): VertexQuery = {
@@ -235,26 +244,34 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
 
 
   def getEdges(direction: Direction, labels: java.lang.String*): java.lang.Iterable[Edge] = {
-    if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
+    if (graph != null) {
+      graph.flushUpdates();
     }
-    graph.flushUpdates();
 
     val out = new ArrayBuffer[SparkEdge]();
     if (direction == Direction.OUT || direction == Direction.BOTH) {
-      var outgoing = graph.curgraph.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
-      if (labels.length > 0) {
-        outgoing = outgoing.filter( x=>labels.contains(x.label) );
+      if (graph != null) {
+        var outgoing = graph.curgraph.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
+        if (labels.length > 0) {
+          outgoing = outgoing.filter( x=>labels.contains(x.label) );
+        }
+        out ++= outgoing.collect();
+      } else {
+        if (labels.length > 0) {
+          out ++= edgeSet.filter( x => labels.contains(x.label) )
+        } else {
+          out ++= edgeSet
+        }
       }
-      //println("Outgoing:" + outgoing.count())
-      out ++= outgoing.collect();
     }
     if (direction == Direction.IN || direction == Direction.BOTH) {
+      if (graph == null) {
+        throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
+      }
       var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter(x => x.inVertexId == id ))
       if (labels.length > 0) {
         incoming = incoming.filter( x=>labels.contains(x.label) );
       }
-      //println("Incoming:" + incoming.count())
       out ++= incoming.collect();
     }
     return out.map( x => { x.graph = graph; x.asInstanceOf[Edge]; } ).toIterable.asJava;
