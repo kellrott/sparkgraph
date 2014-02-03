@@ -4,6 +4,7 @@ package sparkgremlin.test;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.gremlin.test.ComplianceTest;
 import com.tinkerpop.gremlin.Tokens.T;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import java.util.Arrays;
 import sparkgremlin.blueprints.SparkGremlinPipeline;
@@ -17,7 +18,7 @@ public class SparkHasStepTest extends com.tinkerpop.gremlin.test.filter.HasStepT
     public void setUp() {
         System.err.println("Setting Up");
         if (sc == null) {
-            sc = new SparkContext("local", "SparkGraphTest", null, null, null, null);
+            sc = new SparkContext("local", "SparkGraphTest", new SparkConf());
             g = SparkGraphTestFactory.createSparkGraph(sc);
         }
     }

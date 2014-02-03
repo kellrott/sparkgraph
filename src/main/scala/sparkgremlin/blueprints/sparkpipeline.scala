@@ -1078,7 +1078,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     return this.add(new SparkGraphAsPipe(name));
   }
 
-  override def `_`(): SparkGremlinPipeline[S, E] = {
+  def __underscore() : SparkGremlinPipeline[S, E] = {
     throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
   }
 

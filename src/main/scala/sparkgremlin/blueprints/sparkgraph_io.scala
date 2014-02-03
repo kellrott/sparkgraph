@@ -249,7 +249,7 @@ class ParserThread(is:InputStream, queue:BlockingQueue[Option[BuildElement]]) ex
       val reader = new GraphMLReader(inputGraph);
       reader.inputGraph(is);
     } catch {
-      case e => {println("Exception" + e)}
+      case e: Throwable => {println("Exception" + e)}
     } finally {
       while (queue.remainingCapacity() <= 0) {
         Thread.sleep(1)

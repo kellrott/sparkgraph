@@ -8,6 +8,7 @@ import com.tinkerpop.gremlin.java.GremlinPipeline;
 import com.tinkerpop.gremlin.test.ComplianceTest;
 import com.tinkerpop.pipes.PipeFunction;
 import com.tinkerpop.pipes.util.structures.Table;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import sparkgremlin.blueprints.SparkGremlinPipeline;
 import sparkgremlin.blueprints.SparkGremlinPipelineBase;
@@ -23,7 +24,7 @@ public class SparkTableStepTest extends com.tinkerpop.gremlin.test.sideeffect.Ta
     public void setUp() {
         System.err.println("Setting Up");
         if (sc == null) {
-            sc = new SparkContext("local", "SparkGraphTest", null, null, null, null);
+            sc = new SparkContext("local", "SparkGraphTest", new SparkConf());
             g = SparkGraphTestFactory.createSparkGraph(sc);
         }
     }

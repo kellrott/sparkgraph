@@ -4,10 +4,10 @@ name := "SparkGremlin"
 
 version := "0.1"
 
-scalaVersion := "2.9.3"
+scalaVersion := "2.10.0"
 
 libraryDependencies ++= Seq(
-	"org.apache.spark" %% "spark-core" % "0.8.0-incubating",
+	"org.apache.spark" %% "spark-core" % "0.9.0-incubating",
 	"com.tinkerpop.blueprints" % "blueprints-core" % "2.4.0",
 	"com.tinkerpop.blueprints" % "blueprints-test" % "2.4.0" % "test",
 	"com.tinkerpop" % "pipes" % "2.4.0",
@@ -16,8 +16,6 @@ libraryDependencies ++= Seq(
 	"com.novocode" % "junit-interface" % "0.9" % "test"
 )	
 
-
-
 resolvers ++= Seq(
     "Akka Repository" at "http://repo.akka.io/releases/",
     "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
@@ -25,11 +23,7 @@ resolvers ++= Seq(
 )
 
 
-ivyXML := <dependency org="org.eclipse.jetty.orbit" name="javax.servlet" rev="2.5.0.v201103041518"><artifact name="javax.servlet" type="orbit" ext="jar"/></dependency>
-
-
 assemblySettings
-
 
 assembleArtifact in packageScala := false
 

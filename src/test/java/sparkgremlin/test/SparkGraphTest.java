@@ -5,6 +5,7 @@ import com.tinkerpop.blueprints.impls.GraphTest;
 import com.tinkerpop.blueprints.util.io.gml.GMLReaderTestSuite;
 import com.tinkerpop.blueprints.util.io.graphml.GraphMLReaderTestSuite;
 import com.tinkerpop.blueprints.util.io.graphson.GraphSONReaderTestSuite;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import sparkgremlin.blueprints.SparkGraph;
 
@@ -19,7 +20,7 @@ public class SparkGraphTest extends GraphTest {
     public void setUp() {
         System.err.println("Setting Up");
         if (sc == null) {
-            sc = new SparkContext("local", "SparkGraphTest", null, null, null, null);
+            sc = new SparkContext("local", "SparkGraphTest", new SparkConf());
         }
     }
 

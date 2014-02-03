@@ -329,7 +329,7 @@ abstract class BaseQuery extends Query {
   }
 
   def has[T <: Comparable[T]](key: String, value: T, compare: Query.Compare): Query = {
-    return this.has(key, compare, value);
+    return this.has(key, compare, value.asInstanceOf[AnyRef]);
   }
 
   def hasNot(key: String): Query = {
@@ -342,10 +342,9 @@ abstract class BaseQuery extends Query {
     return this;
   }
 
-
   def interval[T <: Comparable[_]](key: String, startValue: T, endValue: T): Query = {
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.GREATER_THAN_EQUAL, startValue));
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.LESS_THAN, endValue));
+    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.GREATER_THAN_EQUAL, startValue.asInstanceOf[AnyRef]));
+    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.LESS_THAN, endValue.asInstanceOf[AnyRef]));
     return this;
   }
 
@@ -509,7 +508,7 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
   }
 
   override def has[T <: Comparable[T]](key: String, value: T, compare: Query.Compare): GraphQuery = {
-    super.has(key, compare, value);
+    super.has(key, compare, value.asInstanceOf[AnyRef]);
     return this;
   }
 

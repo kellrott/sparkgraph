@@ -66,7 +66,11 @@ public abstract class SparkGremlinPipelineBase <S, E> extends Pipeline<S, E> imp
 
     abstract public SparkGremlinPipelineBase<S,E> __table(Table table, PipeFunctionWrapper wrapper);
 
+    public SparkGremlinPipelineBase<S,E> _() {
+        return __underscore();
+    }
 
+    abstract public SparkGremlinPipelineBase<S,E> __underscore();
 
     public SparkGremlinPipelineBase<S, ?> cap() {
         throw new RuntimeException("Unimplemented Method");
