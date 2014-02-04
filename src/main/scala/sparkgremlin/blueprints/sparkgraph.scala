@@ -15,6 +15,7 @@ import org.apache.spark.rdd._
 
 import org.apache.spark.SparkContext
 import scala.util.Random
+import org.apache.spark.storage.StorageLevel
 
 trait RDDKeySet[E] extends java.util.Iterator[E] with java.lang.Iterable[E] {
   def elementRDD() : RDD[E];
@@ -641,9 +642,9 @@ object SparkGraph {
   }
 }
 
-class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) extends Graph with SparkGraphElementSet[SparkGraphElement] {
 
-  var curgraph : RDD[(AnyRef,SparkVertex)] = graph.persist();
+  var curgraph : RDD[(AnyRef,SparkVertex)] = graph.persist(defaultStorage);
   var updates = new ArrayBuffer[BuildElement]();
 
   override def toString() = "sparkgraph[nodes=" + curgraph.count + "]"
@@ -656,8 +657,7 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)]) extends Graph with SparkGraphE
       return false;
     }
     val u = graph.sparkContext.parallelize(updates).map( x => (x.getVertexId, x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
-    val nextgraph = curgraph.cogroup( u ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null).persist();
-    //val nextgraph = curgraph.union(u).groupByKey().map( x => (x._1, SparkGraphBuilder.mergeVertex(x._2)) ).filter(x => x._2 != null).persist();
+    val nextgraph = curgraph.cogroup( u ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null).persist(defaultStorage);
     nextgraph.count();
     curgraph.unpersist();
     curgraph = nextgraph;
