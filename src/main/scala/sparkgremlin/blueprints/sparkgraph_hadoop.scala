@@ -14,10 +14,18 @@ import org.apache.hadoop.util.ReflectionUtils
 import org.apache.hadoop.io.LongWritable
 import com.tinkerpop.blueprints.Direction
 import com.fasterxml.jackson.core.{JsonGenerator, JsonFactory}
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 
 object SparkGraphHadoop {
   def saveAsHadoopGraphSON(path : String, sg : SparkGraph) = {
     sg.graphRDD().saveAsNewAPIHadoopFile(path, classOf[LongWritable], classOf[SparkVertex], classOf[SparkGraphSONOutputFormat]);
+  }
+
+  def loadHadoopGraphSON(path: String, sc : SparkContext) : SparkGraph = {
+    val rdd = sc.newAPIHadoopFile[Long, SparkVertex, SparkGraphSONInputFormat](path);
+    val gr = new SparkGraph(rdd.asInstanceOf[RDD[(AnyRef,SparkVertex)]]);
+    return gr;
   }
 }
 
@@ -34,13 +42,16 @@ class SparkGraphSONParser {
     val out = new SparkVertex(id.asInstanceOf[AnyRef], null);
     for ( (k,v) <- data.asScala ) {
       if (k == "_outE") {
-        val edgeData = v.asInstanceOf[java.util.Map[String,AnyRef]];
-        val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV"), null))
-        for ( (ek,ev) <- edgeData.asScala ) {
-          if (ek == "_id") {
-          } else if (ek == "_label") {
-          } else {
-            outEdge.setProperty(ek,ev)
+        val edgeArray = v.asInstanceOf[java.util.ArrayList[AnyRef]];
+        for ( edgeElement <- edgeArray.asScala ) {
+          val edgeData = edgeElement.asInstanceOf[java.util.Map[String,AnyRef]]
+          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV"), null))
+          for ( (ek,ev) <- edgeData.asScala ) {
+            if (ek == "_id") {
+            } else if (ek == "_label") {
+            } else {
+              outEdge.setProperty(ek,ev)
+            }
           }
         }
       } else if ( k == "_id") {
@@ -57,21 +68,16 @@ class SparkGraphSONParser {
     vertex.getPropertyKeys.asScala.foreach( x => out.put(x, vertex.getProperty(x)) )
     val outE = new java.util.ArrayList[AnyRef]();
     vertex.getEdges(Direction.OUT).asScala.foreach( x => {
-      if (x.getLabel != "http://www.w3.org/1999/02/22-rdf-syntax-ns#type") {
-        val e = new java.util.HashMap[String,AnyRef]()
-        e.put("_id", x.getId)
-        e.put("_label", x.getLabel)
-        e.put("_inV",  x.getVertex(Direction.IN).getId)
-        outE.add(e)
-      }
+      val e = new java.util.HashMap[String,AnyRef]()
+      e.put("_id", x.getId)
+      e.put("_label", x.getLabel)
+      e.put("_inV",  x.getVertex(Direction.IN).getId)
+      outE.add(e)
     } )
-    vertex.getEdges(Direction.OUT, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type").asScala.foreach( x => {
-      out.put("type", x)
-    } )
+
     if (outE.asScala.length > 0) {
       out.put("_outE", outE)
     }
-    //vertex.getEdges()
     val sw = new StringWriter()
     val jw = JSON_FACTORY.createGenerator(sw);
     jw.writeObject(out)

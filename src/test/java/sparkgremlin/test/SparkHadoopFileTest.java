@@ -15,6 +15,7 @@ import sparkgremlin.blueprints.SparkGraphHadoop;
 
 
 import java.lang.reflect.Method;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,9 +42,23 @@ public class SparkHadoopFileTest extends TestCase {
         }
     }
 
-    public void testFileSaveLoad() throws Exception {
-        System.out.println("Howdy");
-        SparkGraphHadoop.saveAsHadoopGraphSON("test_data", g);
+    int iteratorCount(Iterator e) {
+       int out = 0;
+       while (e.hasNext()) {
+           out++;
+           e.next();
+       }
+       return out;
+    }
 
+    public void testFileSaveLoad() throws Exception {
+        SparkGraphHadoop.saveAsHadoopGraphSON("test_graph", g);
+        SparkGraph ng = SparkGraphHadoop.loadHadoopGraphSON("test_graph", sc);
+        Iterator<Vertex> o1 = ng.getVertices("name", "marko").iterator();
+        assertTrue(o1.hasNext());
+        Vertex v1 = o1.next();
+        assertEquals(v1.getProperty("age"), 29);
+        assertEquals(iteratorCount(g.getVertices().iterator()), iteratorCount(ng.getVertices().iterator()));
+        assertEquals(iteratorCount(g.getEdges().iterator()), iteratorCount(ng.getEdges().iterator()));
     }
 }
