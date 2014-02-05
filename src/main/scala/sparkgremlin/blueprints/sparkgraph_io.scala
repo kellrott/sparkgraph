@@ -316,7 +316,7 @@ object SparkGraphBuilder {
       }
       if (b.isEdge && !b.isProperty) {
         if ( !edgeremove.contains(b.getEdgeId)) {
-          out.edgeSet += new SparkEdge(b.getEdgeId, b.getVertexId, b.getVertexInId, b.getLabel, null);
+          out.edgeSet += new SparkEdge(b.getEdgeId, b.getVertexId, b.getVertexInId, b.getLabel, null, null, null);
         } else {
           out.edgeSet += new DeletedEdge(b.getEdgeId);
         }

@@ -113,7 +113,15 @@ abstract class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph)
 }
 
 
-class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:AnyRef, val label:String, @transient inGraph:SparkGraph ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
+class SparkEdge(
+                 override val id:AnyRef,
+                 val outVertexId: AnyRef,
+                 val inVertexId:AnyRef,
+                 val label:String,
+                 @transient inGraph:SparkGraph,
+                 @transient outVertexCache : SparkVertex = null,
+                 @transient inVertexCache : SparkVertex = null
+                 ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
 
   def setGraph(inGraph:SparkGraph) = { graph = inGraph };
 
@@ -145,9 +153,17 @@ class SparkEdge(override val id:AnyRef, val outVertexId: AnyRef, val inVertexId:
   def getVertex(direction: Direction): Vertex = {
     if (graph == null) {
       if (direction == Direction.IN) {
-        return new SparkVertex(inVertexId, null);
+        if (inVertexCache == null) {
+          return new SparkVertex(inVertexId, null);
+        } else {
+          return inVertexCache
+        }
       } else if (direction == Direction.OUT) {
-        return new SparkVertex(outVertexId, null);
+        if (outVertexCache == null) {
+          return new SparkVertex(outVertexId, null);
+        } else {
+          return outVertexCache
+        }
       }
       throw new IllegalArgumentException("Bad Edge Direction")
     } else {
@@ -479,7 +495,7 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
     var edgeSet = edges().asScala;
     var nodeIds = edgeSet.map( _.asInstanceOf[SparkEdge] ).map( x => {
       if ( x.inVertexId == vertex.id ) {
-       (x.outVertexId, true)
+        (x.outVertexId, true)
       } else {
         (x.inVertexId, true)
       }

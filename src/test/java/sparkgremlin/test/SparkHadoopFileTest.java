@@ -10,6 +10,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.storage.StorageLevel;
 import sparkgremlin.blueprints.SparkGraph;
 import sparkgremlin.blueprints.SparkGraphHadoop;
 
@@ -53,7 +54,7 @@ public class SparkHadoopFileTest extends TestCase {
 
     public void testFileSaveLoad() throws Exception {
         SparkGraphHadoop.saveAsHadoopGraphSON("test_graph", g);
-        SparkGraph ng = SparkGraphHadoop.loadHadoopGraphSON("test_graph", sc);
+        SparkGraph ng = SparkGraphHadoop.loadHadoopGraphSON("test_graph", sc, StorageLevel.MEMORY_ONLY());
         Iterator<Vertex> o1 = ng.getVertices("name", "marko").iterator();
         assertTrue(o1.hasNext());
         Vertex v1 = o1.next();
