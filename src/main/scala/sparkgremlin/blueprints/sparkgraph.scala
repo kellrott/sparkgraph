@@ -119,8 +119,8 @@ class SparkEdge(
                  val inVertexId:AnyRef,
                  val label:String,
                  @transient inGraph:SparkGraph,
-                 @transient outVertexCache : SparkVertex = null,
-                 @transient inVertexCache : SparkVertex = null
+                 @transient outVertexCache : Vertex = null,
+                 @transient inVertexCache : Vertex = null
                  ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
 
   def setGraph(inGraph:SparkGraph) = { graph = inGraph };
@@ -224,7 +224,7 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
     if (graph != null) {
       graph.updates += new EdgeBuild(edgeId, id, inVertex.getId, label);
     }
-    val e = new SparkEdge(edgeId, id, inVertex.getId, label, graph);
+    val e = new SparkEdge(edgeId, id, inVertex.getId, label, graph, this, inVertex);
     edgeSet += e;
     return e;
   }
