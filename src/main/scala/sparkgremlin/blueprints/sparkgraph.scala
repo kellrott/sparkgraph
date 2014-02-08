@@ -16,604 +16,9 @@ import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.Random
 import org.apache.spark.storage.StorageLevel
+import sparkgremlin.blueprints.io._
+import sparkgremlin.blueprints.io.build._
 
-trait RDDKeySet[E] extends java.util.Iterator[E] with java.lang.Iterable[E] {
-  def elementRDD() : RDD[E];
-  def elementClass() : Class[_];
-}
-
-trait SparkGraphElementSet[E] extends RDDKeySet[E] {
-  def graphRDD() : RDD[(AnyRef,SparkVertex)];
-  //def flushUpdates() : Boolean;
-}
-
-class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E], inElementClass : Class[_]) extends SparkGraphElementSet[E] {
-
-  def elementClass() : Class[_] = inElementClass;
-  def flushUpdates() : Boolean = inGraph.flushUpdates();
-  def elementRDD(): RDD[E] = rdd;
-  def graphRDD(): RDD[(AnyRef,SparkVertex)] = {
-    flushUpdates();
-    inGraph.curgraph
-  };
-
-  var rddCollect : Array[E] = null;
-  var rddCollectIndex = 0;
-
-  def hasNext: Boolean = {
-    if (rddCollect == null) {
-      rddCollect = rdd.collect();
-      rddCollectIndex = 0;
-    }
-    return rddCollectIndex < rddCollect.length;
-  }
-
-  def next(): E = {
-    if (!hasNext) {
-      return null.asInstanceOf[E];
-    }
-    if (rddCollect != null) {
-      val out = rddCollect(rddCollectIndex).asInstanceOf[SparkGraphElement];
-      out.graph = inGraph
-      rddCollectIndex += 1
-      out.asInstanceOf[E];
-    } else {
-      null.asInstanceOf[E]
-    }
-  }
-
-  def remove() = {};
-
-  def iterator(): java.util.Iterator[E] = {
-    rddCollect = null;
-    this
-  };
-}
-
-
-abstract class SparkGraphElement(val id:AnyRef, @transient var graph:SparkGraph) extends Serializable with Element {
-
-  def getId: AnyRef = id;
-
-  val propMap = new HashMap[String,Any]();
-
-  def setProperty(key: String, value: scala.AnyRef) = {
-    if (key == null || key.length == 0) {
-      throw new IllegalArgumentException("Invalid Key String");
-    }
-    if (value == null) {
-      throw new IllegalArgumentException("Invalid Property Value");
-    }
-    propMap(key) = value;
-  }
-
-  def getProperty[T](key: String): T = {
-    propMap.get(key).getOrElse(null).asInstanceOf[T];
-  }
-
-  def getPropertyKeys: java.util.Set[String] = propMap.keySet.asJava;
-
-  def removeProperty[T](key: String): T = {
-    return propMap.remove(key).orNull.asInstanceOf[T];
-  }
-
-  def labelMatch(args:String*) : Boolean = {
-    if (args.length == 0) {
-      return true;
-    }
-    if (args.length == 1) {
-      return id == args(0);
-    }
-    if (args.length == 2) {
-      return propMap.getOrElse(args(0), null) == args(1);
-    }
-    return false;
-  }
-
-}
-
-
-class SparkEdge(
-                 override val id:AnyRef,
-                 val outVertexId: AnyRef,
-                 val inVertexId:AnyRef,
-                 val label:String,
-                 @transient inGraph:SparkGraph,
-                 @transient outVertexCache : Vertex = null,
-                 @transient inVertexCache : Vertex = null
-                 ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
-
-  def setGraph(inGraph:SparkGraph) = { graph = inGraph };
-
-  override def equals(other: Any) = other match {
-    case that: SparkEdge => (this.id == that.id)
-    case that: Edge => (this.id == that.getId)
-    case _ => false
-  }
-
-  override def hashCode() = id.hashCode
-
-  override def setProperty(key:String, value:AnyRef) = {
-    if (key == "id" || key == "label") {
-      throw new IllegalArgumentException("Invalid Key String");
-    }
-    super.setProperty(key,value);
-    if (graph != null) {
-      graph.updates += new EdgePropertyBuild(id, outVertexId, inVertexId, key, value);
-    }
-  }
-
-  def remove() = {
-    if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
-    }
-    graph.updates += new EdgeRemoveBuild(id, outVertexId);
-  }
-
-  def getVertex(direction: Direction): Vertex = {
-    if (graph == null) {
-      if (direction == Direction.IN) {
-        if (inVertexCache == null) {
-          return new SparkVertex(inVertexId, null);
-        } else {
-          return inVertexCache
-        }
-      } else if (direction == Direction.OUT) {
-        if (outVertexCache == null) {
-          return new SparkVertex(outVertexId, null);
-        } else {
-          return outVertexCache
-        }
-      }
-      throw new IllegalArgumentException("Bad Edge Direction")
-    } else {
-      if (direction == Direction.IN) {
-        return graph.getVertex(inVertexId);
-      } else if (direction == Direction.OUT) {
-        return graph.getVertex(outVertexId);
-      }
-      throw new IllegalArgumentException("Bad Edge Direction")
-    }
-  }
-
-  override def labelMatch(args:String*) : Boolean = {
-    if (args.length == 1)
-      return label == args(0)
-    return super.labelMatch(args:_*);
-  }
-
-  def getLabel: String = label;
-
-}
-
-class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends SparkGraphElement(id, inGraph) with Vertex with Serializable {
-  val edgeSet = new ArrayBuffer[SparkEdge]();
-
-  override def setProperty(key:String, value:AnyRef) = {
-    if (key == null || key.length == 0 || key == "id") {
-      throw new IllegalArgumentException("Bad Property Key");
-    }
-    super.setProperty(key,value);
-    if (graph != null) {
-      graph.updates += new VertexPropertyBuild(id, key, value);
-    }
-  }
-
-  override def equals(other: Any) = other match {
-    case that: SparkVertex => (this.id == that.id)
-    case _ => false
-  }
-
-  override def hashCode() = id.hashCode
-
-  def remove() = {
-    if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
-    }
-    graph.updates += new VertexRemoveBuild(id);
-  }
-
-  def addEdge(label: String, inVertex: Vertex): Edge = {
-    //if (graph == null) {
-    //  throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
-    //}
-    if (label == null) {
-      throw new IllegalArgumentException("Cannot add unlabeled edge");
-    }
-    val edgeId = new java.lang.Long(Random.nextLong());
-    if (graph != null) {
-      graph.updates += new EdgeBuild(edgeId, id, inVertex.getId, label);
-    }
-    val e = new SparkEdge(edgeId, id, inVertex.getId, label, graph, this, inVertex);
-    edgeSet += e;
-    return e;
-  }
-
-  def query(): VertexQuery = {
-    return new SparkVertexQuery(this, graph);
-  }
-
-  def getVertices(direction: Direction, labels: java.lang.String*): java.lang.Iterable[Vertex] = {
-    if (graph == null) {
-      throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
-    }
-    val idSet = new ArrayBuffer[AnyRef]();
-    if ( direction == Direction.IN || direction == Direction.BOTH ) {
-      var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter( _.inVertexId == id ) );
-      if (labels.length > 0) {
-        incoming = incoming.filter( _.labelMatch(labels:_*) );
-      }
-      idSet ++= incoming.map( _.outVertexId ).collect();
-      //println("OUT IDS:" + idSet)
-    }
-    if ( direction == Direction.OUT || direction == Direction.BOTH ) {
-      var outgoing = graph.curgraph.lookup(id).head.edgeSet;
-      if (labels.length > 0) {
-        outgoing = outgoing.filter(_.labelMatch(labels:_*));
-      }
-      idSet ++= outgoing.map( _.inVertexId )
-      //println("IN IDS:" + idSet)
-    }
-    val verts = graph.curgraph.filter( x => idSet.contains(x._1)  ).collect()
-    val out = idSet.flatMap( x => verts.filter( y => x == y._1) );
-    return out.map( x => { val y = x._2; y.graph = graph; y.asInstanceOf[Vertex]; } ).toIterable.asJava;
-  }
-
-
-  def getEdges(direction: Direction, labels: java.lang.String*): java.lang.Iterable[Edge] = {
-    if (graph != null) {
-      graph.flushUpdates();
-    }
-
-    val out = new ArrayBuffer[SparkEdge]();
-    if (direction == Direction.OUT || direction == Direction.BOTH) {
-      if (graph != null) {
-        var outgoing = graph.curgraph.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
-        if (labels.length > 0) {
-          outgoing = outgoing.filter( x=>labels.contains(x.label) );
-        }
-        out ++= outgoing.collect();
-      } else {
-        if (labels.length > 0) {
-          out ++= edgeSet.filter( x => labels.contains(x.label) )
-        } else {
-          out ++= edgeSet
-        }
-      }
-    }
-    if (direction == Direction.IN || direction == Direction.BOTH) {
-      if (graph == null) {
-        throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
-      }
-      var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter(x => x.inVertexId == id ))
-      if (labels.length > 0) {
-        incoming = incoming.filter( x=>labels.contains(x.label) );
-      }
-      out ++= incoming.collect();
-    }
-    return out.map( x => { x.graph = graph; x.asInstanceOf[Edge]; } ).toIterable.asJava;
-  }
-}
-
-
-class HasContainer(val key : String, val predicate: Predicate, val value:AnyRef) extends Serializable {
-  def isLegal(element:Element) : Boolean = {
-    return this.predicate.evaluate(element.getProperty(this.key), this.value);
-  }
-}
-
-
-object SparkGraphQuery {
-  def containCheck(value:Any, predicate : Predicate, valueSet:AnyRef) : Boolean = {
-    val out = valueSet match {
-      case _ : List[String] => {
-        valueSet.asInstanceOf[List[String]].contains(value)
-      }
-      case _ : java.util.List[String] => {
-        valueSet.asInstanceOf[java.util.List[String]].asScala.contains(value)
-      }
-      case _ =>  {
-        throw new IllegalArgumentException( "Missing Comparison: " + valueSet.getClass  )
-      }
-    }
-    if (predicate == Contains.NOT_IN)
-      return !out;
-    return out;
-  }
-}
-
-
-
-abstract class BaseQuery extends Query {
-  var directionValue : Direction = Direction.BOTH;
-  var labelSet = Array[String]();
-  var limit = Integer.MAX_VALUE;
-  var hasContainers = new ArrayBuffer[HasContainer]();
-
-  def has(key: String): Query = {
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.NOT_EQUAL, null));
-    return this;
-  }
-
-  def has(key: String, value: scala.AnyRef): Query = {
-    this.hasContainers += new HasContainer(key, com.tinkerpop.blueprints.Compare.EQUAL, value);
-    return this;
-  }
-
-  def has(key: String, predicate: Predicate, value: scala.AnyRef): Query = {
-    this.hasContainers += (new HasContainer(key, predicate, value));
-    return this;
-  }
-
-  def has[T <: Comparable[T]](key: String, value: T, compare: Query.Compare): Query = {
-    return this.has(key, compare, value.asInstanceOf[AnyRef]);
-  }
-
-  def hasNot(key: String): Query = {
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.EQUAL, null));
-    return this;
-  }
-
-  def hasNot(key: String, value: scala.AnyRef): Query = {
-    this.hasContainers += new HasContainer(key, com.tinkerpop.blueprints.Compare.NOT_EQUAL, value);
-    return this;
-  }
-
-  def interval[T <: Comparable[_]](key: String, startValue: T, endValue: T): Query = {
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.GREATER_THAN_EQUAL, startValue.asInstanceOf[AnyRef]));
-    this.hasContainers += (new HasContainer(key, com.tinkerpop.blueprints.Compare.LESS_THAN, endValue.asInstanceOf[AnyRef]));
-    return this;
-  }
-
-  def limit(count: Int): Query = {
-    this.limit = count;
-    return this;
-  }
-}
-
-object SparkVertexQuery {
-  def idCmp(left:AnyRef, right:AnyRef) : Boolean = {
-    return left==right;
-  }
-}
-
-
-class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends BaseQuery with VertexQuery {
-
-  def direction(direction: Direction): VertexQuery = {
-    directionValue = direction;
-    return this;
-  }
-
-  def labels(inLabels:String*): VertexQuery = {
-    labelSet = inLabels.toArray;
-    return this;
-  }
-
-  def count(): Long = {
-    var i = 0L;
-    for ( c <- edges().asScala ) {
-      i += 1;
-    }
-    return i;
-  }
-
-  def vertexIds(): AnyRef = {
-    throw new IllegalArgumentException("Null ID value");
-  }
-
-  override def has(key: String): VertexQuery = {
-    super.has(key);
-    return this;
-  }
-
-  override def hasNot(key: String): VertexQuery = {
-    super.hasNot(key);
-    return this;
-  }
-
-  override def has(key: String, value: scala.AnyRef): VertexQuery = {
-    super.has(key, value);
-    return this;
-  }
-
-  override def hasNot(key: String, value: scala.AnyRef): VertexQuery = {
-    super.hasNot(key, value);
-    return this;
-  }
-
-  override def has(key: String, predicate: Predicate, value: scala.AnyRef): VertexQuery = {
-    super.has(key, predicate, value);
-    return this;
-  }
-
-  override def has[T <: Comparable[T]](key: String, value: T, compare: Query.Compare): VertexQuery = {
-    super.has(key, value, compare);
-    return this;
-  }
-
-  override def interval[T <: Comparable[_]](key: String, startValue: T, endValue: T): VertexQuery = {
-    super.interval(key, startValue, endValue);
-    return this;
-  }
-
-  override def limit(limit: Int): VertexQuery = {
-    super.limit(limit);
-    return this;
-  }
-
-  def edges(): Iterable[Edge] = {
-    graph.flushUpdates();
-    var outEdges = if (directionValue == Direction.OUT || directionValue == Direction.BOTH) {
-      val nodes = graph.curgraph.lookup(vertex.id);
-      if (nodes.length == 0) {
-        Array[SparkEdge]();
-      } else {
-        nodes.head.edgeSet.toArray
-      }
-    } else {
-      Array[SparkEdge]();
-    }
-
-    val vert_id = vertex.id;
-    val inEdges = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
-      graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => y.inVertexId == vert_id ) ).collect();
-    } else {
-      Array[SparkEdge]();
-    }
-
-    var edgeSet = outEdges ++ inEdges;
-    if (labelSet.length > 0) {
-      edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
-    }
-    for ( has <- hasContainers ) {
-      edgeSet = has.predicate match {
-        case Compare.EQUAL => {
-          has.value match {
-            case _ => edgeSet.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
-        }
-        case Compare.NOT_EQUAL => {
-          has.value match {
-            case _ => edgeSet.filter( _.propMap.getOrElse(has.key, null) != has.value);
-          }
-        }
-        case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          edgeSet.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
-        }
-        case Contains.IN | Contains.NOT_IN => {
-          edgeSet.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null), has.predicate, has.value) )
-        }
-        case _ => {
-          throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
-        }
-      }
-    }
-    return edgeSet.slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Edge]} ).toIterable.asJava;
-  }
-  def vertices(): Iterable[Vertex] = {
-    var edgeSet = edges().asScala;
-    var nodeIds = edgeSet.map( _.asInstanceOf[SparkEdge] ).map( x => {
-      if ( x.inVertexId == vertex.id ) {
-        (x.outVertexId, true)
-      } else {
-        (x.inVertexId, true)
-      }
-    } ).toSeq;
-    val out = graph.curgraph.context.parallelize(nodeIds).join( graph.curgraph ).map( x => (x._2._2 ) ).collect();
-    return out.map( x => {x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
-  }
-
-}
-
-
-class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
-
-  override def has(key: String): GraphQuery = {
-    super.has(key);
-    return this;
-  }
-
-  override def has(key: String, value: scala.AnyRef): GraphQuery = {
-    super.has(key,value);
-    return this;
-  }
-
-  override def has(key: String, predicate: Predicate, value: scala.AnyRef): GraphQuery = {
-    super.has(key,predicate,value);
-    return this;
-  }
-
-  override def has[T <: Comparable[T]](key: String, value: T, compare: Query.Compare): GraphQuery = {
-    super.has(key, compare, value.asInstanceOf[AnyRef]);
-    return this;
-  }
-
-  override def limit(count: Int): GraphQuery = {
-    super.limit(count)
-    return this;
-  }
-
-  override def hasNot(key: String, value: scala.AnyRef): GraphQuery = {
-    super.hasNot(key, value)
-    return this;
-  }
-
-  override def interval[T <: Comparable[_]](key: String, startValue: T, endValue: T): GraphQuery = {
-    super.interval(key, startValue, endValue);
-    return this;
-  }
-
-  override def hasNot(key: String): GraphQuery = {
-    super.hasNot(key);
-    return this;
-  }
-
-  def edges(): Iterable[Edge] = {
-    graph.flushUpdates();
-    //hasContainers.foreach( println );
-    var rdd = graph.curgraph.flatMap( _._2.edgeSet );
-    for ( has <- hasContainers ) {
-      rdd = has.predicate match {
-        case Compare.EQUAL => {
-          has.value match {
-            case null => rdd.filter( !_.propMap.contains(has.key) );
-            case _ => rdd.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
-        }
-        case Compare.NOT_EQUAL => {
-          has.value match {
-            case null => rdd.filter( _.propMap.contains(has.key));
-            case _ => rdd.filter( _.propMap.getOrElse(has.key, null) != has.value);
-          }
-        }
-        case Contains.IN => {
-          println("Container:" + has.value)
-          rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
-        }
-        case Compare.GREATER_THAN_EQUAL | Compare.GREATER_THAN  | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
-        }
-        case _ => {
-          throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
-        }
-      }
-    }
-    return rdd.collect().slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Edge]} ).toIterable.asJava;
-  }
-
-  def vertices(): Iterable[Vertex] = {
-    graph.flushUpdates();
-    //hasContainers.foreach( println );
-    var rdd = graph.curgraph.map(_._2);
-    for ( has <- hasContainers ) {
-      rdd = has.predicate match {
-        case Compare.EQUAL => {
-          has.value match {
-            case null => rdd.filter( !_.propMap.contains(has.key) );
-            case _ => rdd.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
-        }
-        case Compare.NOT_EQUAL => {
-          has.value match {
-            case null => rdd.filter( _.propMap.contains(has.key));
-            case _ => rdd.filter( _.propMap.getOrElse(has.key, null) != has.value);
-          }
-        }
-        case Contains.IN | Contains.NOT_IN => {
-          rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
-        }
-        case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL| Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
-        }
-        case _ => {
-          throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
-        }
-      }
-    }
-    return rdd.collect().slice(0, limit).map( x => { x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
-  }
-}
 
 object SparkGraph {
   val FEATURES = new Features();
@@ -658,7 +63,11 @@ object SparkGraph {
   }
 }
 
-class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+
+  def this(graph:RDD[(AnyRef,SparkVertex)]) = {
+    this(graph, StorageLevel.MEMORY_ONLY)
+  }
 
   var curgraph : RDD[(AnyRef,SparkVertex)] = graph.persist(defaultStorage);
   var updates = new ArrayBuffer[BuildElement]();
@@ -668,7 +77,6 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel =
   def getFeatures: Features = SparkGraph.FEATURES;
 
   def flushUpdates() : Boolean = {
-    //updates.foreach(x => println("UPDATE: " + x + " " + x.getVertexId))
     if (updates.length == 0) {
       return false;
     }
@@ -681,6 +89,11 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel =
     return true;
   }
 
+  /**
+   *
+   * @param id
+   * @return
+   */
   def getEdge(id: scala.Any): Edge = {
     if (id == null) {
       throw new IllegalArgumentException("Null ID value");
@@ -695,6 +108,11 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel =
     return out.asInstanceOf[Edge];
   }
 
+  /**
+   *
+   * @param id
+   * @return
+   */
   def getVertex(id: AnyRef): Vertex = {
     if (id == null) {
       throw new IllegalArgumentException();
@@ -720,14 +138,27 @@ class SparkGraph(graph:RDD[(AnyRef,SparkVertex)], defaultStorage: StorageLevel =
 
   def shutdown() = curgraph.unpersist()
 
+  /**
+   *
+   * @param edge
+   */
   def removeEdge(edge: Edge) {
     updates += new EdgeRemoveBuild(edge.getId, edge.asInstanceOf[SparkEdge].outVertexId);
   }
 
+  /**
+   *
+   * @param vertex
+   */
   def removeVertex(vertex: Vertex) {
     updates += new VertexRemoveBuild(vertex.getId);
   }
 
+  /**
+   *
+   * @param id
+   * @return The newly created vertex
+   */
   def addVertex(id: scala.AnyRef): Vertex =  {
     val u : java.lang.Long = id match {
       case x : java.lang.Long => x;

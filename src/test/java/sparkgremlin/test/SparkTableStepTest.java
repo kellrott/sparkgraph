@@ -2,16 +2,11 @@ package sparkgremlin.test;
 
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraphFactory;
-import com.tinkerpop.gremlin.java.GremlinFluentPipeline;
-import com.tinkerpop.gremlin.java.GremlinPipeline;
-import com.tinkerpop.gremlin.test.ComplianceTest;
 import com.tinkerpop.pipes.PipeFunction;
 import com.tinkerpop.pipes.util.structures.Table;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
-import sparkgremlin.blueprints.SparkGremlinPipeline;
-import sparkgremlin.blueprints.SparkGremlinPipelineBase;
+import sparkgremlin.gremlin.SparkGremlinPipeline;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)

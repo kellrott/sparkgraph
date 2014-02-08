@@ -12,7 +12,7 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.storage.StorageLevel;
 import sparkgremlin.blueprints.SparkGraph;
-import sparkgremlin.blueprints.SparkGraphHadoop;
+import sparkgremlin.blueprints.hadoop.SparkGraphHadoop;
 
 
 import java.lang.reflect.Method;

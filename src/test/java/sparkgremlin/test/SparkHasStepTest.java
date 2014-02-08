@@ -2,12 +2,11 @@
 package sparkgremlin.test;
 
 import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.gremlin.test.ComplianceTest;
 import com.tinkerpop.gremlin.Tokens.T;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import java.util.Arrays;
-import sparkgremlin.blueprints.SparkGremlinPipeline;
+import sparkgremlin.gremlin.SparkGremlinPipeline;
 
 
 public class SparkHasStepTest extends com.tinkerpop.gremlin.test.filter.HasStepTest {

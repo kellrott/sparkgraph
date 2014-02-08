@@ -5,8 +5,8 @@ import java.io.{File, FileInputStream}
 
 import collection.JavaConverters._
 
-import sparkgremlin.blueprints.{SparkGraphBuilder, GraphMLIterator}
 import org.apache.spark.SparkContext
+import sparkgremlin.blueprints.io.build.{SparkGraphBuilder, GraphMLIterator}
 
 
 object ReadFile {

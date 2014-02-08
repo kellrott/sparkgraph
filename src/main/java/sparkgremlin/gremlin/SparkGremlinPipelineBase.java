@@ -1,13 +1,7 @@
-package sparkgremlin.blueprints;
+package sparkgremlin.gremlin;
 
-import com.tinkerpop.blueprints.Element;
-import com.tinkerpop.gremlin.Tokens;
 import com.tinkerpop.gremlin.java.GremlinFluentPipeline;
-import com.tinkerpop.pipes.Pipe;
 import com.tinkerpop.pipes.PipeFunction;
-import com.tinkerpop.pipes.sideeffect.SideEffectPipe;
-import com.tinkerpop.pipes.transform.SideEffectCapPipe;
-import com.tinkerpop.pipes.util.FluentUtility;
 import com.tinkerpop.pipes.util.Pipeline;
 import com.tinkerpop.pipes.util.structures.Row;
 import com.tinkerpop.pipes.util.structures.Table;
