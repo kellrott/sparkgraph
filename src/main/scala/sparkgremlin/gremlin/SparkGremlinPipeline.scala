@@ -18,6 +18,7 @@ import java.lang.RuntimeException
 import scala.util.Random
 import scala.collection.mutable.ArrayBuffer
 import sparkgremlin.blueprints._
+import sparkgremlin.gremlin.pipe._
 
 
 object SparkGremlinPipeline {

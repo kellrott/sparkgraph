@@ -1,4 +1,6 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
+
+import sparkgremlin.gremlin.BulkPipe
 
 /**
   *

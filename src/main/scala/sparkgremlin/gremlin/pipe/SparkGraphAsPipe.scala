@@ -1,7 +1,8 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
+import sparkgremlin.gremlin._
 
 /**
  * Created by kellrott on 2/8/14.

@@ -1,7 +1,8 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import sparkgremlin.blueprints.SparkGraphElement
 import org.apache.spark.rdd.RDD
+import sparkgremlin.gremlin._
 
 /**
  * Created by kellrott on 2/8/14.

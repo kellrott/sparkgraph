@@ -1,4 +1,6 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
+
+import sparkgremlin.gremlin.{SparkPipelineException, BulkPipeData, BulkPipe}
 
 /**
  * Created by kellrott on 2/8/14.

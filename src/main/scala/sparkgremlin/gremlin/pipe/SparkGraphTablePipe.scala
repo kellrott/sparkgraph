@@ -1,7 +1,8 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import collection.JavaConverters._
 import com.tinkerpop.pipes.util.structures.Table
+import sparkgremlin.gremlin.{SparkGraphBulkData, SparkPipelineException, BulkPipeData, SparkGremlinPipelineBase}
 
 /**
  * Created by kellrott on 2/8/14.

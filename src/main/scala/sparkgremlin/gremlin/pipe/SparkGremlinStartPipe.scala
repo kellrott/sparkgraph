@@ -1,7 +1,8 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import sparkgremlin.blueprints.{SparkGraphElementSet, SparkGraphElement}
 import org.apache.spark.rdd.RDD
+import sparkgremlin.gremlin.{SparkGraphBulkData, BulkPipeData, BulkPipe}
 
 /**
  * Created by kellrott on 2/8/14.

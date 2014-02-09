@@ -1,4 +1,4 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import com.tinkerpop.blueprints.Predicate
 

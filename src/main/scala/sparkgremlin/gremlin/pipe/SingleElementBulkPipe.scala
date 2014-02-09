@@ -1,6 +1,7 @@
-package sparkgremlin.gremlin
+package sparkgremlin.gremlin.pipe
 
 import scala.collection.mutable.ArrayBuffer
+import sparkgremlin.gremlin.BulkPipeData
 
 /**
  * Created by kellrott on 2/8/14.
