@@ -3,13 +3,14 @@ package sparkgremlin.blueprints
 import com.tinkerpop.blueprints.{Direction, Edge, Vertex}
 import sparkgremlin.blueprints.io.build.{EdgeRemoveBuild, EdgePropertyBuild}
 
+//import org.apache.spark.graphx.{Edge => GraphXEdge}
+
 /**
  *
  * @param id
  * @param outVertexId
  * @param inVertexId
  * @param label
- * @param inGraph
  * @param outVertexCache
  * @param inVertexCache
  */
@@ -21,9 +22,9 @@ class SparkEdge(
                  @transient inGraph:SparkGraph,
                  @transient outVertexCache : Vertex = null,
                  @transient inVertexCache : Vertex = null
-                 ) extends SparkGraphElement(id, inGraph) with Edge with Serializable {
+                 ) extends SparkGraphElementBase( id, inGraph) with Edge with Serializable {
 
-  def setGraph(inGraph:SparkGraph) = { graph = inGraph };
+  //def setGraph(inGraph:SparkGraph) = { graph = inGraph };
 
   override def equals(other: Any) = other match {
     case that: SparkEdge => (this.id == that.id)

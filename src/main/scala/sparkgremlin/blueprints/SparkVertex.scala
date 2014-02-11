@@ -13,7 +13,7 @@ import scala.util.Random
  * @param id
  * @param inGraph
  */
-class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends SparkGraphElement(id, inGraph) with Vertex with Serializable {
+class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends SparkGraphElementBase(id, inGraph) with Vertex with Serializable {
   val edgeSet = new ArrayBuffer[SparkEdge]();
 
   override def setProperty(key:String, value:AnyRef) = {

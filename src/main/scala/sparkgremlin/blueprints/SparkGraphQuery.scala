@@ -11,10 +11,10 @@ import scala.Iterable
 object SparkGraphQuery {
   def containCheck(value:Any, predicate : Predicate, valueSet:AnyRef) : Boolean = {
     val out = valueSet match {
-      case _ : List[String] => {
+      case _ : List[_] => {
         valueSet.asInstanceOf[List[String]].contains(value)
       }
-      case _ : java.util.List[String] => {
+      case _ : java.util.List[_] => {
         valueSet.asInstanceOf[java.util.List[String]].asScala.contains(value)
       }
       case _ =>  {
@@ -77,23 +77,28 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
     for ( has <- hasContainers ) {
       rdd = has.predicate match {
         case Compare.EQUAL => {
+          /*
           has.value match {
             case null => rdd.filter( !_.propMap.contains(has.key) );
             case _ => rdd.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
+          }   */
+          rdd.filter( _.getProperty(has.key) == has.value )
         }
         case Compare.NOT_EQUAL => {
+          /*
           has.value match {
             case null => rdd.filter( _.propMap.contains(has.key));
             case _ => rdd.filter( _.propMap.getOrElse(has.key, null) != has.value);
           }
+          */
+          rdd.filter( _.getProperty(has.key) != has.value)
         }
         case Contains.IN => {
           println("Container:" + has.value)
-          rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
+          rdd.filter( x => SparkGraphQuery.containCheck(x.getProperty(has.key).asInstanceOf[String], has.predicate, has.value) )
         }
         case Compare.GREATER_THAN_EQUAL | Compare.GREATER_THAN  | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
+          rdd.filter( x => has.predicate.evaluate(x.getProperty(has.key), has.value) )
         }
         case _ => {
           throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
@@ -110,22 +115,27 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
     for ( has <- hasContainers ) {
       rdd = has.predicate match {
         case Compare.EQUAL => {
+          /*
           has.value match {
             case null => rdd.filter( !_.propMap.contains(has.key) );
             case _ => rdd.filter( _.propMap.getOrElse(has.key, null) == has.value )
-          }
+          } */
+          rdd.filter( _.getProperty(has.key) == has.value )
         }
         case Compare.NOT_EQUAL => {
+          /*
           has.value match {
             case null => rdd.filter( _.propMap.contains(has.key));
             case _ => rdd.filter( _.propMap.getOrElse(has.key, null) != has.value);
           }
+          */
+          rdd.filter( _.getProperty(has.key) != has.value )
         }
         case Contains.IN | Contains.NOT_IN => {
-          rdd.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null).asInstanceOf[String], has.predicate, has.value) )
+          rdd.filter( x => SparkGraphQuery.containCheck(x.getProperty(has.key).asInstanceOf[String], has.predicate, has.value) )
         }
         case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL| Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          rdd.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
+          rdd.filter( x => has.predicate.evaluate(x.getProperty(has.key), has.value) )
         }
         case _ => {
           throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )

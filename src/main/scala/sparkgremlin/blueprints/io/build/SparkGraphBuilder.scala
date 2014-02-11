@@ -89,12 +89,16 @@ object SparkGraphBuilder {
       new SparkVertex(newVertex.getId, null);
     } else {
       val tmp = new SparkVertex(originalVertex.getId, null);
-      tmp.propMap ++= originalVertex.propMap;
+      for ( k <- originalVertex.getPropertyKeys.asScala) {
+        tmp.setProperty(k, originalVertex.getProperty(k));
+      }
       tmp.edgeSet ++= originalVertex.edgeSet.filter( x => !rmSet.contains(x.id) );
       tmp;
     }
     if (newVertex != null) {
-      out.propMap ++= newVertex.propMap;
+      for ( k <- newVertex.getPropertyKeys.asScala) {
+        out.setProperty(k, newVertex.getProperty(k));
+      }
       out.edgeSet ++= newVertex.edgeSet.filter( x => !rmSet.contains(x.id) );
     }
     return out;

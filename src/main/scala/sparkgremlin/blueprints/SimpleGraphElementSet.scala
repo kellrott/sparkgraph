@@ -33,7 +33,7 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
     }
     if (rddCollect != null) {
       val out = rddCollect(rddCollectIndex).asInstanceOf[SparkGraphElement];
-      out.graph = inGraph
+      out.setGraph(inGraph)
       rddCollectIndex += 1
       out.asInstanceOf[E];
     } else {

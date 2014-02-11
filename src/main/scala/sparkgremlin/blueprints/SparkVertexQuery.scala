@@ -109,19 +109,19 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
       edgeSet = has.predicate match {
         case Compare.EQUAL => {
           has.value match {
-            case _ => edgeSet.filter( _.propMap.getOrElse(has.key, null) == has.value )
+            case _ => edgeSet.filter( _.getProperty(has.key) == has.value )
           }
         }
         case Compare.NOT_EQUAL => {
           has.value match {
-            case _ => edgeSet.filter( _.propMap.getOrElse(has.key, null) != has.value);
+            case _ => edgeSet.filter( _.getProperty(has.key) != has.value);
           }
         }
         case Compare.GREATER_THAN | Compare.GREATER_THAN_EQUAL | Compare.LESS_THAN | Compare.LESS_THAN_EQUAL  => {
-          edgeSet.filter( x => has.predicate.evaluate(x.propMap.getOrElse(has.key, null), has.value) )
+          edgeSet.filter( x => has.predicate.evaluate(x.getProperty(has.key), has.value) )
         }
         case Contains.IN | Contains.NOT_IN => {
-          edgeSet.filter( x => SparkGraphQuery.containCheck(x.propMap.getOrElse(has.key, null), has.predicate, has.value) )
+          edgeSet.filter( x => SparkGraphQuery.containCheck(x.getProperty(has.key), has.predicate, has.value) )
         }
         case _ => {
           throw new IllegalArgumentException( "Missing Comparison: " + has.predicate); // + " " + has.value.getClass  )
