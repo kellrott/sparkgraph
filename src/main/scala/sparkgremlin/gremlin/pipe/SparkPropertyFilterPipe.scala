@@ -29,14 +29,14 @@ object SparkPropertyFilterPipe {
    def filterEdges( vert: SparkVertex, state : GremlinVertex, key:String, predicate: Predicate, value: AnyRef) : GremlinVertex = {
      val newState = new GremlinVertex();
      newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.getProperty(key), value) ).map( _.id ).toArray
+     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.getProperty(key), value) ).map( _.id.asInstanceOf[AnyRef] ).toArray
      return newState;
    }
 
    def filterEdgesLabels( vert: SparkVertex, state : GremlinVertex, predicate: Predicate, value: AnyRef) : GremlinVertex = {
      val newState = new GremlinVertex();
      newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id ).toArray
+     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id.asInstanceOf[AnyRef] ).toArray
      return newState;
    }
 
@@ -47,7 +47,7 @@ object SparkPropertyFilterPipe {
        case _ => value.toString.toLong
      }
      newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.id, vid) ).map( _.id ).toArray
+     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.id, vid) ).map( _.id.asInstanceOf[AnyRef] ).toArray
      return newState;
    }
  }

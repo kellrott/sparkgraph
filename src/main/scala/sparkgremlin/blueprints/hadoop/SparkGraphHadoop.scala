@@ -18,7 +18,7 @@ object SparkGraphHadoop {
 
   def loadHadoopGraphSON(path: String, sc : SparkContext, defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) : SparkGraph = {
     val rdd = sc.newAPIHadoopFile[Long, SparkVertex, SparkGraphSONInputFormat](path);
-    val gr = new SparkGraph(rdd.asInstanceOf[RDD[(AnyRef,SparkVertex)]], defaultStorage);
+    val gr = new SparkGraph(rdd.asInstanceOf[RDD[(Long,SparkVertex)]], defaultStorage);
     return gr;
   }
 }

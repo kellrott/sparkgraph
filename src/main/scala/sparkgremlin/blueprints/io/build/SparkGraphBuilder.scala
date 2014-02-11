@@ -16,12 +16,12 @@ import sparkgremlin.blueprints.{SparkEdge, SparkVertex, SparkGraph}
 
 
 object SparkGraphBuilder {
-  def vertexBuild(id:AnyRef, buildSeq:Seq[BuildElement]) : SparkVertex = {
+  def vertexBuild(id:Long, buildSeq:Seq[BuildElement]) : SparkVertex = {
     //println("VertexBuild: " + id )
     val wasBuilt = buildSeq.filter( _.isInstanceOf[VertexBuild] ).length > 0;
     val out = new SparkVertexBuilt(id, wasBuilt);
 
-    val edgeremove = new HashSet[AnyRef]();
+    val edgeremove = new HashSet[Any]();
     for (b <- buildSeq) {
       if (b.isRemoval && b.isEdge) {
         edgeremove += b.getEdgeId;
@@ -34,9 +34,9 @@ object SparkGraphBuilder {
       }
       if (b.isEdge && !b.isProperty) {
         if ( !edgeremove.contains(b.getEdgeId)) {
-          out.edgeSet += new SparkEdge(b.getEdgeId, b.getVertexId, b.getVertexInId, b.getLabel, null, null, null);
+          out.edgeSet += new SparkEdge(b.getEdgeId.asInstanceOf[Long], b.getVertexId.asInstanceOf[Long], b.getVertexInId.asInstanceOf[Long], b.getLabel, null, null, null);
         } else {
-          out.edgeSet += new DeletedEdge(b.getEdgeId);
+          out.edgeSet += new DeletedEdge(b.getEdgeId.asInstanceOf[Long]);
         }
       }
     }
@@ -84,11 +84,11 @@ object SparkGraphBuilder {
     val rmSet = if (newVertex != null)
       newVertex.edgeSet.filter( _.isInstanceOf[DeletedEdge]).map(_.id).toSet;
     else
-      Set[AnyRef]()
+      Set[Long]()
     var out : SparkVertex = if (originalVertex == null) {
-      new SparkVertex(newVertex.getId, null);
+      new SparkVertex(newVertex.getId.asInstanceOf[Long], null);
     } else {
-      val tmp = new SparkVertex(originalVertex.getId, null);
+      val tmp = new SparkVertex(originalVertex.getId.asInstanceOf[Long], null);
       for ( k <- originalVertex.getPropertyKeys.asScala) {
         tmp.setProperty(k, originalVertex.getProperty(k));
       }
@@ -105,7 +105,7 @@ object SparkGraphBuilder {
   }
 
   def buildGraph(sc:SparkContext, input:Iterator[BuildElement]) : SparkGraph = {
-    val buildGraph = sc.parallelize(input.toSeq).map( x => (x.getVertexId, x));
+    val buildGraph = sc.parallelize(input.toSeq).map( x => (x.getVertexId.asInstanceOf[Long], x));
     val vertexSet = buildGraph.groupByKey().map( x => (x._1, vertexBuild(x._1, x._2)) );
     return new SparkGraph(vertexSet);
   }

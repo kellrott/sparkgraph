@@ -7,7 +7,7 @@ import sparkgremlin.blueprints.SparkGraph
 /**
  * Created by kellrott on 2/8/14.
  */
-class EdgeInputPrinter(val edgeId : AnyRef, val outVertex:Vertex, val inVertex:Vertex, queue:BlockingQueue[Option[BuildElement]]) extends InputElement with Edge {
+class EdgeInputPrinter(val edgeId : Long, val outVertex:Vertex, val inVertex:Vertex, queue:BlockingQueue[Option[BuildElement]]) extends InputElement with Edge {
    def getVertex(direction: Direction): Vertex = {
      throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
    }
@@ -17,5 +17,5 @@ class EdgeInputPrinter(val edgeId : AnyRef, val outVertex:Vertex, val inVertex:V
    }
 
    def getLabel: String = ""
-   def getId : AnyRef = edgeId;
+   def getId : AnyRef = edgeId.asInstanceOf[AnyRef];
  }

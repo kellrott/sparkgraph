@@ -1,9 +1,11 @@
 package sparkgremlin.blueprints
 
+import collection.JavaConverters._
+
 import com.tinkerpop.blueprints.{Direction, Edge, Vertex}
 import sparkgremlin.blueprints.io.build.{EdgeRemoveBuild, EdgePropertyBuild}
-
-//import org.apache.spark.graphx.{Edge => GraphXEdge}
+import scala.collection.mutable.HashMap
+import org.apache.spark.graphx.{Edge => GraphXEdge}
 
 /**
  *
@@ -15,16 +17,19 @@ import sparkgremlin.blueprints.io.build.{EdgeRemoveBuild, EdgePropertyBuild}
  * @param inVertexCache
  */
 class SparkEdge(
-                 override val id:AnyRef,
-                 val outVertexId: AnyRef,
-                 val inVertexId:AnyRef,
+                 val id:Long,
+                 val outVertexId: Long,
+                 val inVertexId: Long,
                  val label:String,
-                 @transient inGraph:SparkGraph,
+                 @transient var graph:SparkGraph,
                  @transient outVertexCache : Vertex = null,
                  @transient inVertexCache : Vertex = null
-                 ) extends SparkGraphElementBase( id, inGraph) with Edge with Serializable {
+                 ) extends GraphXEdge[HashMap[String,Any]](outVertexId, inVertexId, new HashMap[String,Any]()) with SparkGraphElement with Edge with Serializable {
 
-  //def setGraph(inGraph:SparkGraph) = { graph = inGraph };
+  def getId() : AnyRef = id.asInstanceOf[AnyRef];
+
+  def setGraph(inGraph:SparkGraph) = { graph = inGraph };
+  def getGraph() = graph;
 
   override def equals(other: Any) = other match {
     case that: SparkEdge => (this.id == that.id)
@@ -38,7 +43,13 @@ class SparkEdge(
     if (key == "id" || key == "label") {
       throw new IllegalArgumentException("Invalid Key String");
     }
-    super.setProperty(key,value);
+    if (key == null || key.length == 0) {
+      throw new IllegalArgumentException("Invalid Key String");
+    }
+    if (value == null) {
+      throw new IllegalArgumentException("Invalid Property Value");
+    }
+    attr(key) = value;
     if (graph != null) {
       graph.updates += new EdgePropertyBuild(id, outVertexId, inVertexId, key, value);
     }
@@ -82,12 +93,28 @@ class SparkEdge(
     }
   }
 
-  override def labelMatch(args:String*) : Boolean = {
+  def labelMatch(args:String*) : Boolean = {
     if (args.length == 1)
       return label == args(0)
-    return super.labelMatch(args:_*);
+    if (args.length == 0) {
+      return true;
+    }
+    if (args.length == 2) {
+      return attr.getOrElse(args(0), null) == args(1);
+    }
+    return false;
   }
 
   def getLabel: String = label;
+
+  def getProperty[T](key: String): T = {
+    attr.get(key).getOrElse(null).asInstanceOf[T];
+  }
+
+  def getPropertyKeys: java.util.Set[String] = attr.keySet.asJava;
+
+  def removeProperty[T](key: String): T = {
+    return attr.remove(key).orNull.asInstanceOf[T];
+  }
 
 }

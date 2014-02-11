@@ -6,13 +6,13 @@ package sparkgremlin.blueprints.io.build
 
 
 trait BuildElement extends Serializable  {
-   def getVertexId : AnyRef;
+   def getVertexId : Any;
    def isEdge : Boolean;
    def isProperty : Boolean;
    def isRemoval : Boolean;
    def getKey : String;
    def getValue : Any;
-   def getEdgeId : AnyRef;
-   def getVertexInId : AnyRef;
+   def getEdgeId : Any;
+   def getVertexInId : Any;
    def getLabel : String;
  }

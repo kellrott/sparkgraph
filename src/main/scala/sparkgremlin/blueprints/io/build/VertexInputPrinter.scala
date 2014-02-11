@@ -7,9 +7,9 @@ import sparkgremlin.blueprints.SparkGraph
 /**
  * Created by kellrott on 2/8/14.
  */
-class VertexInputPrinter(val id:AnyRef, queue:BlockingQueue[Option[BuildElement]]) extends InputElement with Vertex {
+class VertexInputPrinter(val id:Long, queue:BlockingQueue[Option[BuildElement]]) extends InputElement with Vertex {
 
-   def getId : AnyRef = id;
+   def getId : AnyRef = id.asInstanceOf[AnyRef];
 
    def addEdge(label: String, inVertex: Vertex): Edge = {
      //println("Vertex Add Edge: " + label + " " + vertex);

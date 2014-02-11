@@ -3,8 +3,8 @@ package sparkgremlin.blueprints.io.build
 /**
  * Created by kellrott on 2/8/14.
  */
-class VertexBuild(vertexId:AnyRef) extends BuildElement {
-   def getVertexId : AnyRef = vertexId;
+class VertexBuild(vertexId:Long) extends BuildElement {
+   def getVertexId : AnyRef = vertexId.asInstanceOf[AnyRef];
    def isEdge : Boolean = false;
    def isProperty : Boolean = false;
    def isRemoval = false;

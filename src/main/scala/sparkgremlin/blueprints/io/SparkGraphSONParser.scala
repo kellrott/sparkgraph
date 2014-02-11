@@ -22,13 +22,13 @@ class SparkGraphSONParser {
   def fromJSON(text:String) : SparkVertex = {
     val data = JSON_MAPPER.readValue(text, classOf[java.util.Map[String,AnyRef]])
     val id = data.get("_id").toString.toLong;
-    val out = new SparkVertex(id.asInstanceOf[AnyRef], null);
+    val out = new SparkVertex(id.asInstanceOf[Long], null);
     for ( (k,v) <- data.asScala ) {
       if (k == "_outE") {
         val edgeArray = v.asInstanceOf[java.util.ArrayList[AnyRef]];
         for ( edgeElement <- edgeArray.asScala ) {
           val edgeData = edgeElement.asInstanceOf[java.util.Map[String,AnyRef]]
-          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV"), null))
+          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV").asInstanceOf[Long], null))
           for ( (ek,ev) <- edgeData.asScala ) {
             if (ek == "_id") {
             } else if (ek == "_label") {

@@ -8,7 +8,7 @@ import org.apache.spark.rdd.RDD
  */
 abstract class SparkGraphBulkData[E](
                                       val graphData : SparkGraphElementSet[_],
-                                      val graphState : RDD[(AnyRef, GremlinVertex)],
+                                      val graphState : RDD[(Long, GremlinVertex)],
                                       val asColumns: Array[String],
                                       val elementType : BulkDataType.Value,
                                       val extractKey : String) extends BulkPipeData[E]

@@ -13,7 +13,7 @@ import scala.util.Random
  * @param id
  * @param inGraph
  */
-class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends SparkGraphElementBase(id, inGraph) with Vertex with Serializable {
+class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends SparkGraphElementBase(id, inGraph) with Vertex with Serializable {
   val edgeSet = new ArrayBuffer[SparkEdge]();
 
   override def setProperty(key:String, value:AnyRef) = {
@@ -46,9 +46,9 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
     }
     val edgeId = new java.lang.Long(Random.nextLong());
     if (graph != null) {
-      graph.updates += new EdgeBuild(edgeId, id, inVertex.getId, label);
+      graph.updates += new EdgeBuild(edgeId, id, inVertex.getId.asInstanceOf[Long], label);
     }
-    val e = new SparkEdge(edgeId, id, inVertex.getId, label, graph, this, inVertex);
+    val e = new SparkEdge(edgeId, id, inVertex.getId.asInstanceOf[Long], label, graph, this, inVertex);
     edgeSet += e;
     return e;
   }
@@ -61,7 +61,7 @@ class SparkVertex(override val id:AnyRef, @transient inGraph:SparkGraph) extends
     if (graph == null) {
       throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
     }
-    val idSet = new ArrayBuffer[AnyRef]();
+    val idSet = new ArrayBuffer[Long]();
     if ( direction == Direction.IN || direction == Direction.BOTH ) {
       var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter( _.inVertexId == id ) );
       if (labels.length > 0) {

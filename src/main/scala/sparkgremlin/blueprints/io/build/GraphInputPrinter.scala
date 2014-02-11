@@ -32,10 +32,10 @@ class GraphInputPrinter(queue:BlockingQueue[Option[BuildElement]]) extends Graph
      throw new UnsupportedOperationException(SparkGraph.WRITE_ONLY_MESSAGE);
    }
 
-   def addVertex(id: scala.AnyRef): Vertex =  {
+   def addVertex(id: AnyRef): Vertex =  {
      //println("AddingVertex: " + id);
-     val out = new VertexInputPrinter(id, queue);
-     queue.put(Some(new VertexBuild(id)));
+     val out = new VertexInputPrinter(id.asInstanceOf[Long], queue);
+     queue.put(Some(new VertexBuild(id.asInstanceOf[Long])));
      return out;
    }
 
@@ -43,10 +43,10 @@ class GraphInputPrinter(queue:BlockingQueue[Option[BuildElement]]) extends Graph
      throw new UnsupportedOperationException(SparkGraph.WRITE_ONLY_MESSAGE);
    }
 
-   def addEdge(id: scala.AnyRef, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
+   def addEdge(id: AnyRef, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
      //println("AddingEdge: " + id);
-     val out = new EdgeInputPrinter(id, outVertex, inVertex, queue);
-     queue.put(Some(new EdgeBuild(id, outVertex.getId, inVertex.getId, label)));
+     val out = new EdgeInputPrinter(id.asInstanceOf[Long], outVertex, inVertex, queue);
+     queue.put(Some(new EdgeBuild(id.asInstanceOf[Long], outVertex.getId.asInstanceOf[Long], inVertex.getId.asInstanceOf[Long], label)));
      return out;
    }
 

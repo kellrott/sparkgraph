@@ -11,7 +11,7 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
   def elementClass() : Class[_] = inElementClass;
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
-  def graphRDD(): RDD[(AnyRef,SparkVertex)] = {
+  def graphRDD(): RDD[(Long,SparkVertex)] = {
     flushUpdates();
     inGraph.curgraph
   };
