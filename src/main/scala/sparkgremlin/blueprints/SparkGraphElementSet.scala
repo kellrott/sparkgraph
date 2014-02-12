@@ -1,10 +1,10 @@
 package sparkgremlin.blueprints
 
-import org.apache.spark.rdd.RDD
+import org.apache.spark.graphx.{Graph => GraphXGraph}
 
 /**
  * Created by kellrott on 2/8/14.
  */
 trait SparkGraphElementSet[E] extends RDDKeySet[E] {
-  def graphRDD() : RDD[(Long,SparkVertex)];
+  def graphX() : GraphXGraph[SparkVertex, SparkEdge];
 }

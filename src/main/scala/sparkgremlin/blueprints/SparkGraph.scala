@@ -19,6 +19,10 @@ import org.apache.spark.storage.StorageLevel
 import sparkgremlin.blueprints.io._
 import sparkgremlin.blueprints.io.build._
 
+import org.apache.spark.graphx.impl.{GraphImpl => GraphXImplGraph, EdgePartitionBuilder}
+import org.apache.spark.graphx.{Graph => GraphXGraph, Edge => GraphXEdge, VertexRDD, EdgeRDD}
+import scala.reflect.ClassTag
+import com.tinkerpop.blueprints.Edge
 
 object SparkGraph {
   val FEATURES = new Features();
@@ -59,20 +63,29 @@ object SparkGraph {
   val NOT_READY_MESSAGE = "Element not connected to Graph"
 
   def generate(sc:SparkContext) : SparkGraph = {
-    return new SparkGraph(sc.parallelize(Array[(Long,SparkVertex)]()));
+    return new SparkGraph(sc.parallelize(Array[(Long,SparkVertex)]()), sc.parallelize(Array[SparkEdge]()));
   }
 }
 
-class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
 
+  def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge]) = {
+    this(vertices, edges, StorageLevel.MEMORY_ONLY)
+  }
+  //val vertRDD = VertexRDD(vertices);
+  //val edgeRDD = createEdgeRDD(edges)
+  var graph : GraphXGraph[SparkVertex,SparkEdge] = GraphXGraph(vertices, edges.asInstanceOf[RDD[GraphXEdge[AnyRef]]]).asInstanceOf[GraphXGraph[SparkVertex,SparkEdge]];
+
+  /*
   def this(graph:RDD[(Long,SparkVertex)]) = {
     this(graph, StorageLevel.MEMORY_ONLY)
   }
+  */
 
-  var curgraph : RDD[(Long,SparkVertex)] = graph.persist(defaultStorage);
+  //var curgraph : RDD[(Long,SparkVertex)] = graph.persist(defaultStorage);
   var updates = new ArrayBuffer[BuildElement]();
 
-  override def toString() = "sparkgraph[nodes=" + curgraph.count + "]"
+  override def toString() = "sparkgraph[nodes=" + graph.vertices.count + "]"
 
   def getFeatures: Features = SparkGraph.FEATURES;
 
@@ -80,11 +93,15 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
     if (updates.length == 0) {
       return false;
     }
-    val u = graph.sparkContext.parallelize(updates).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
-    val nextgraph = curgraph.cogroup( u ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null).persist(defaultStorage);
-    nextgraph.count();
-    curgraph.unpersist();
-    curgraph = nextgraph;
+    val u = graph.vertices.sparkContext.parallelize(updates)
+
+    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
+    val newEdges =  u.filter( ! _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => (x._1, SparkGraphBuilder.edgeBuild(x._1, x._2)));
+
+    val nextVerts = graph.vertices.cogroup( newVertex ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null)
+    val nextEdges = graph.edges.map( x => (x.asInstanceOf[SparkEdge].id, x.asInstanceOf[SparkEdge]) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1, x._2._2) ).filter( _ != null )
+
+    graph = GraphXGraph(nextVerts, nextEdges.asInstanceOf[RDD[GraphXEdge[AnyRef]]]).asInstanceOf[GraphXGraph[SparkVertex,SparkEdge]];
     updates.clear();
     return true;
   }
@@ -99,11 +116,11 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
       throw new IllegalArgumentException("Null ID value");
     }
     flushUpdates();
-    val set = curgraph.flatMap( x => x._2.edgeSet.filter( _.id == id ) ).collect();
+    val set = graph.edges.filter( x => x.asInstanceOf[SparkEdge].getId() == id ).collect();
     if (set.length == 0) {
       return null;
     }
-    val out = set.head;
+    val out = set.head.asInstanceOf[SparkEdge]
     out.graph = this;
     return out.asInstanceOf[Edge];
   }
@@ -123,7 +140,7 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
         case x : java.lang.Long => id.asInstanceOf[java.lang.Long]
         case _ => id.toString.toLong
       }
-      val set = curgraph.lookup(lid);
+      val set = graph.vertices.lookup(lid);
       if (set.length > 0) {
         val out = set.head;
         out.graph = this;
@@ -136,7 +153,7 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
     return null;
   }
 
-  def shutdown() = curgraph.unpersist()
+  def shutdown() = graph = null
 
   /**
    *
@@ -177,7 +194,7 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
 
   def getVertices(key: String, value: scala.Any): Iterable[Vertex] = {
     flushUpdates();
-    return curgraph.filter(x => x._2.getProperty(key) == value).map(_._2.asInstanceOf[Vertex]).collect().toIterable.asJava;
+    return graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2.asInstanceOf[Vertex]).collect().toIterable.asJava;
   }
 
   def addEdge(id: Any, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
@@ -201,13 +218,13 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
 
   def getEdges: Iterable[Edge] = {
     flushUpdates();
-    val out = curgraph.flatMap( x => x._2.edgeSet );
+    val out = graph.edges.map( x => x.asInstanceOf[SparkEdge] );
     return new SimpleGraphElementSet[SparkEdge](this, out, classOf[SparkEdge]).asInstanceOf[Iterable[Edge]];
   }
 
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
-    val out = curgraph.flatMap( x => x._2.edgeSet ).filter( _.labelMatch(key, value.toString) );
+    val out = graph.edges.filter( _.asInstanceOf[SparkEdge].labelMatch(key, value.toString) );
     return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[SparkEdge]), classOf[SparkEdge]);
   }
 
@@ -217,7 +234,7 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
 
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[Vertex](this, curgraph.map( _._2.asInstanceOf[SparkVertex] ), classOf[SparkVertex] );
+    return new SimpleGraphElementSet[Vertex](this, graph.vertices.map( _._2.asInstanceOf[SparkVertex] ), classOf[SparkVertex] );
   }
 
   def elementClass() : Class[_] = classOf[SparkVertex];
@@ -246,13 +263,13 @@ class SparkGraph(graph:RDD[(Long,SparkVertex)], defaultStorage: StorageLevel) ex
   }
 
   def remove() = {};
-  def graphRDD(): RDD[(Long, SparkVertex)] = {
+  def graphX(): GraphXGraph[SparkVertex,SparkEdge] = {
     flushUpdates()
-    curgraph
+    graph
   };
 
   def elementRDD(): RDD[SparkGraphElement] = {
     //return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
-    return graphRDD().map( _._2 )
+    return graph.vertices.map( _._2 )
   }
 }

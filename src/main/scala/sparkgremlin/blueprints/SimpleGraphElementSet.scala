@@ -2,6 +2,7 @@ package sparkgremlin.blueprints
 
 import org.apache.spark.rdd.RDD
 import com.tinkerpop.blueprints.Element
+import org.apache.spark.graphx.{Graph => GraphXGraph}
 
 /**
  * Created by kellrott on 2/8/14.
@@ -11,10 +12,6 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
   def elementClass() : Class[_] = inElementClass;
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
-  def graphRDD(): RDD[(Long,SparkVertex)] = {
-    flushUpdates();
-    inGraph.curgraph
-  };
 
   var rddCollect : Array[E] = null;
   var rddCollectIndex = 0;
@@ -26,6 +23,8 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
     }
     return rddCollectIndex < rddCollect.length;
   }
+
+  def graphX() : GraphXGraph[SparkVertex, SparkEdge] = inGraph.graphX()
 
   def next(): E = {
     if (!hasNext) {

@@ -58,6 +58,11 @@ object SparkGraphBuilder {
     return out;
   }
 
+  def edgeBuild(id:Long, buildSeq:Seq[BuildElement]) : SparkEdge = {
+
+    null
+  }
+
   def mergeVertex(originalVertexSet:Seq[SparkVertex], newVertexSet:Seq[SparkVertex]) : SparkVertex = {
 
     if ( !(originalVertexSet.length == 0 || originalVertexSet.length == 1) || !(newVertexSet.length == 0 || newVertexSet.length == 1) ) {
@@ -73,7 +78,6 @@ object SparkGraphBuilder {
       case 0 => null : SparkVertex;
       case 1 => originalVertexSet.head
     }
-
 
     if (newVertex != null && newVertex.isInstanceOf[DeletedVertex]) {
       return null;
@@ -104,9 +108,14 @@ object SparkGraphBuilder {
     return out;
   }
 
+  def mergeEdge(originalVertexSet:Seq[SparkEdge], newVertexSet:Seq[SparkEdge]) : SparkEdge = {
+    null
+  }
+
   def buildGraph(sc:SparkContext, input:Iterator[BuildElement]) : SparkGraph = {
-    val buildGraph = sc.parallelize(input.toSeq).map( x => (x.getVertexId.asInstanceOf[Long], x));
-    val vertexSet = buildGraph.groupByKey().map( x => (x._1, vertexBuild(x._1, x._2)) );
-    return new SparkGraph(vertexSet);
+    val u = sc.parallelize(input.toSeq)
+    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
+    val newEdges =  u.filter( ! _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => SparkGraphBuilder.edgeBuild(x._1, x._2));
+    return new SparkGraph(newVertex, newEdges);
   }
 }

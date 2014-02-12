@@ -63,20 +63,20 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     }
     val idSet = new ArrayBuffer[Long]();
     if ( direction == Direction.IN || direction == Direction.BOTH ) {
-      var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter( _.inVertexId == id ) );
+      var incoming = graph.graph.edges.filter( _.dstId == id ).map( _.asInstanceOf[SparkEdge] );
       if (labels.length > 0) {
         incoming = incoming.filter( _.labelMatch(labels:_*) );
       }
       idSet ++= incoming.map( _.outVertexId ).collect();
     }
     if ( direction == Direction.OUT || direction == Direction.BOTH ) {
-      var outgoing = graph.curgraph.lookup(id).head.edgeSet;
+      var outgoing = graph.graph.edges.filter( _.srcId == id ).map( _.asInstanceOf[SparkEdge] );
       if (labels.length > 0) {
         outgoing = outgoing.filter(_.labelMatch(labels:_*));
       }
-      idSet ++= outgoing.map( _.inVertexId )
+      idSet ++= outgoing.map( _.inVertexId ).collect()
     }
-    val verts = graph.curgraph.filter( x => idSet.contains(x._1)  ).collect()
+    val verts = graph.graph.vertices.filter( x => idSet.contains(x._1)  ).collect()
     val out = idSet.flatMap( x => verts.filter( y => x == y._1) );
     return out.map( x => { val y = x._2; y.graph = graph; y.asInstanceOf[Vertex]; } ).toIterable.asJava;
   }
@@ -90,7 +90,7 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     val out = new ArrayBuffer[SparkEdge]();
     if (direction == Direction.OUT || direction == Direction.BOTH) {
       if (graph != null) {
-        var outgoing = graph.curgraph.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
+        var outgoing = graph.graph.vertices.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
         if (labels.length > 0) {
           outgoing = outgoing.filter( x=>labels.contains(x.label) );
         }
@@ -107,7 +107,7 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
       if (graph == null) {
         throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
       }
-      var incoming = graph.curgraph.flatMap( x => x._2.edgeSet.filter(x => x.inVertexId == id ))
+      var incoming = graph.graph.edges.filter( x => x.dstId == id ).map(_.asInstanceOf[SparkEdge])
       if (labels.length > 0) {
         incoming = incoming.filter( x=>labels.contains(x.label) );
       }

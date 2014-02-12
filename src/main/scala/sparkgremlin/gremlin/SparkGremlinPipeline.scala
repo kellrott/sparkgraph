@@ -45,7 +45,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   } else if (start.isInstanceOf[SparkVertex]) {
     val sparkStart = start.asInstanceOf[SparkVertex]
     val startID = sparkStart.getId
-    val startRDD = sparkStart.graph.curgraph.filter( x => x._1 == startID  ).map(_._2);
+    val startRDD = sparkStart.graph.graphX().vertices.filter( x => x._1 == startID  ).map(_._2);
     pipes.add(new SparkGremlinStartPipe(new SimpleGraphElementSet[SparkVertex](sparkStart.graph, startRDD, classOf[SparkVertex])));
     pipes.add(new SparkGraphQueryPipe[SparkVertex](BulkDataType.VERTEX_DATA));
   } else {

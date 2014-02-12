@@ -83,27 +83,32 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
 
   def edges(): java.lang.Iterable[Edge] = {
     graph.flushUpdates();
+    val vert_id = vertex.id;
     var outEdges = if (directionValue == Direction.OUT || directionValue == Direction.BOTH) {
-      val nodes = graph.curgraph.lookup(vertex.id);
-      if (nodes.length == 0) {
+      val edges = graph.graphX().edges.filter( x => x.srcId == vert_id).collect;
+      if (edges.length == 0) {
         Array[SparkEdge]();
       } else {
-        nodes.head.edgeSet.toArray
+        edges
       }
     } else {
       Array[SparkEdge]();
     }
 
-    val vert_id = vertex.id;
     val inEdges = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
-      graph.curgraph.flatMap( x => x._2.edgeSet.filter( y => y.inVertexId == vert_id ) ).collect();
+      val edges = graph.graphX().edges.filter( x => x.dstId == vert_id ).collect();
+      if (edges.length == 0) {
+        Array[SparkEdge]();
+      } else {
+        edges
+      }
     } else {
       Array[SparkEdge]();
     }
 
     var edgeSet = outEdges ++ inEdges;
     if (labelSet.length > 0) {
-      edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
+      edgeSet = edgeSet.filter( x => labelSet.contains(x.asInstanceOf[SparkEdge].label) );
     }
     for ( has <- hasContainers ) {
       edgeSet = has.predicate match {
@@ -139,7 +144,8 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
         (x.inVertexId, true)
       }
     } ).toSeq;
-    val out = graph.curgraph.context.parallelize(nodeIds).join( graph.curgraph ).map( x => (x._2._2 ) ).collect();
+    val out = graph.graphX().vertices.context.parallelize(nodeIds).join( graph.graphX().vertices ).map( x => x._2._2 ).collect();
+    //val out = graph.curgraph.context.parallelize(nodeIds).join( graph.curgraph ).map( x => (x._2._2 ) ).collect();
     return out.map( x => {x.graph = graph; x.asInstanceOf[Vertex]} ).toIterable.asJava;
   }
 
