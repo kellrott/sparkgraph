@@ -15,6 +15,8 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : BulkDataType.Value) exte
    }
 
    def bulkProcess() : BulkPipeData[E] = {
+     throw new RuntimeException("FIX THIS CLASS!!!")
+     /*
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
      if (cls == BulkDataType.VERTEX_DATA) {
        val active_ids = bs.graphData.elementRDD().map( x => (x.asInstanceOf[SparkVertex].id, true) );
@@ -34,6 +36,7 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : BulkDataType.Value) exte
        }
      }
      return null;
+     */
    }
 
  }

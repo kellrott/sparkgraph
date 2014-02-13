@@ -218,13 +218,13 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
 
   def getEdges: Iterable[Edge] = {
     flushUpdates();
-    val out = graph.edges.map( x => x.asInstanceOf[SparkEdge] );
+    val out = graph.edges.map( x => x.attr );
     return new SimpleGraphElementSet[SparkEdge](this, out, classOf[SparkEdge]).asInstanceOf[Iterable[Edge]];
   }
 
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
-    val out = graph.edges.filter( _.asInstanceOf[SparkEdge].labelMatch(key, value.toString) );
+    val out = graph.edges.filter( _.attr.labelMatch(key, value.toString) );
     return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[SparkEdge]), classOf[SparkEdge]);
   }
 

@@ -16,6 +16,8 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
 
    def bulkProcess(): BulkPipeData[SparkVertex] = {
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
+     throw new RuntimeException("FIX THIS AREA!!!!")
+     /*
      val edges = bs.graphData.graphRDD().map( x => (x._1, x._2.edgeSet.map(y => y.inVertexId) ) );
      val n = edges.join( bs.graphState ).flatMap( x => x._2._1.map( y => (y, x._2._2)) );
      val reduced = n.reduceByKey( (x,y) => GremlinVertex.merge(x, y) );
@@ -24,5 +26,6 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
      ) {
        def currentRDD(): RDD[SparkVertex] = graphData.graphRDD().map( _._2 )
      }
+     */
    }
  }

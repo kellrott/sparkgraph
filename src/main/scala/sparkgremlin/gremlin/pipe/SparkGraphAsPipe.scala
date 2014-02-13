@@ -15,6 +15,8 @@ class SparkGraphAsPipe[S,E](name: String) extends BulkPipe[S,E] {
    def bulkProcess(): BulkPipeData[E] = {
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
      val tname = name;
+     throw new RuntimeException("Fix this area!!!!")
+     /*
      val stateRDD = bs.graphData.graphRDD().join( bs.graphState );
      val tkey = bs.extractKey;
      val out = bs.elementType match {
@@ -33,5 +35,6 @@ class SparkGraphAsPipe[S,E](name: String) extends BulkPipe[S,E] {
      return new SparkGraphBulkData[E](bs.graphData, out, Array(name), bs.elementType, bs.extractKey) {
        def currentRDD(): RDD[E] = bs.currentRDD()
      }
+     */
    }
  }

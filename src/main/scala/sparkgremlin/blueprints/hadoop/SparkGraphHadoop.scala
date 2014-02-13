@@ -13,12 +13,13 @@ import sparkgremlin.blueprints.{SparkVertex, SparkGraph}
 
 object SparkGraphHadoop {
   def saveAsHadoopGraphSON(path : String, sg : SparkGraph) = {
-    sg.graphRDD().saveAsNewAPIHadoopFile(path, classOf[LongWritable], classOf[SparkVertex], classOf[SparkGraphSONOutputFormat]);
+    //sg.graphX().saveAsNewAPIHadoopFile(path, classOf[LongWritable], classOf[SparkVertex], classOf[SparkGraphSONOutputFormat]);
   }
 
   def loadHadoopGraphSON(path: String, sc : SparkContext, defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) : SparkGraph = {
-    val rdd = sc.newAPIHadoopFile[Long, SparkVertex, SparkGraphSONInputFormat](path);
-    val gr = new SparkGraph(rdd.asInstanceOf[RDD[(Long,SparkVertex)]], defaultStorage);
-    return gr;
+    //val rdd = sc.newAPIHadoopFile[Long, SparkVertex, SparkGraphSONInputFormat](path);
+    //val gr = new SparkGraph(rdd.asInstanceOf[RDD[(Long,SparkVertex)]], defaultStorage);
+    //return gr;
+    null
   }
 }

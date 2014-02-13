@@ -5,7 +5,6 @@ import collection.JavaConverters._
 import com.tinkerpop.blueprints.{Direction, Edge, Vertex}
 import sparkgremlin.blueprints.io.build.{EdgeRemoveBuild, EdgePropertyBuild}
 import scala.collection.mutable.HashMap
-import org.apache.spark.graphx.{Edge => GraphXEdge}
 
 /**
  *
@@ -24,18 +23,23 @@ class SparkEdge(
                  @transient var graph:SparkGraph,
                  @transient outVertexCache : Vertex = null,
                  @transient inVertexCache : Vertex = null
-                 ) extends GraphXEdge[HashMap[String,Any]](outVertexId, inVertexId, new HashMap[String,Any]()) with SparkGraphElement with Edge with Serializable {
+                 ) extends SparkGraphElement with Edge with Serializable {
 
-  def getId() : AnyRef = id.asInstanceOf[AnyRef];
+  def getId: AnyRef = id.asInstanceOf[AnyRef];
 
-  def setGraph(inGraph:SparkGraph) = { graph = inGraph };
-  def getGraph() = graph;
+  val propMap = new HashMap[String,Any]();
 
   override def equals(other: Any) = other match {
     case that: SparkEdge => (this.id == that.id)
     case that: Edge => (this.id == that.getId)
     case _ => false
   }
+
+  def setGraph(inGraph: SparkGraph) = {
+    graph = inGraph
+  }
+
+  def getGraph() : SparkGraph = graph
 
   override def hashCode() = id.hashCode
 
@@ -49,7 +53,7 @@ class SparkEdge(
     if (value == null) {
       throw new IllegalArgumentException("Invalid Property Value");
     }
-    attr(key) = value;
+    propMap(key) = value;
     if (graph != null) {
       graph.updates += new EdgePropertyBuild(id, outVertexId, inVertexId, key, value);
     }
@@ -100,7 +104,7 @@ class SparkEdge(
       return true;
     }
     if (args.length == 2) {
-      return attr.getOrElse(args(0), null) == args(1);
+      return propMap.getOrElse(args(0), null) == args(1);
     }
     return false;
   }
@@ -108,13 +112,13 @@ class SparkEdge(
   def getLabel: String = label;
 
   def getProperty[T](key: String): T = {
-    attr.get(key).getOrElse(null).asInstanceOf[T];
+    propMap.get(key).getOrElse(null).asInstanceOf[T];
   }
 
-  def getPropertyKeys: java.util.Set[String] = attr.keySet.asJava;
+  def getPropertyKeys: java.util.Set[String] = propMap.keySet.asJava;
 
   def removeProperty[T](key: String): T = {
-    return attr.remove(key).orNull.asInstanceOf[T];
+    return propMap.remove(key).orNull.asInstanceOf[T];
   }
 
 }

@@ -3,8 +3,7 @@ package sparkgremlin.blueprints
 import collection.JavaConverters._
 import org.apache.spark.SparkContext._
 import com.tinkerpop.blueprints._
-import java.lang.Iterable
-import scala.Iterable
+
 
 /**
  * Created by kellrott on 2/8/14.
@@ -85,7 +84,7 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
     graph.flushUpdates();
     val vert_id = vertex.id;
     var outEdges = if (directionValue == Direction.OUT || directionValue == Direction.BOTH) {
-      val edges = graph.graphX().edges.filter( x => x.srcId == vert_id).collect;
+      val edges = graph.graphX().edges.filter( x => x.srcId == vert_id).map(_.attr).collect;
       if (edges.length == 0) {
         Array[SparkEdge]();
       } else {
@@ -95,8 +94,10 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
       Array[SparkEdge]();
     }
 
+    println(graph.graphX().edges.take(1)(0).attr)
+
     val inEdges = if (directionValue == Direction.IN || directionValue == Direction.BOTH) {
-      val edges = graph.graphX().edges.filter( x => x.dstId == vert_id ).collect();
+      val edges = graph.graphX().edges.filter( x => x.dstId == vert_id ).map(_.attr).collect();
       if (edges.length == 0) {
         Array[SparkEdge]();
       } else {
@@ -108,7 +109,7 @@ class SparkVertexQuery(val vertex:SparkVertex, val graph:SparkGraph)  extends Ba
 
     var edgeSet = outEdges ++ inEdges;
     if (labelSet.length > 0) {
-      edgeSet = edgeSet.filter( x => labelSet.contains(x.asInstanceOf[SparkEdge].label) );
+      edgeSet = edgeSet.filter( x => labelSet.contains(x.label) );
     }
     for ( has <- hasContainers ) {
       edgeSet = has.predicate match {
