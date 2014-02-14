@@ -16,55 +16,62 @@ import sparkgremlin.blueprints.{SparkEdge, SparkVertex, SparkGraph}
 
 
 object SparkGraphBuilder {
+
+  /**
+   * This takes a set of built instructions and compiles them into a 'BuiltVertex' or a 'DeletedVertex'
+   * These are later merged with the existing set of vertices in 'mergeVertex', with the 'DeletedVertex'
+   * objects acting as an instruction to remove vertices
+   * @param id
+   * @param buildSeq
+   * @return
+   */
   def vertexBuild(id:Long, buildSeq:Seq[BuildElement]) : SparkVertex = {
-    //println("VertexBuild: " + id )
-    val wasBuilt = buildSeq.filter( _.isInstanceOf[VertexBuild] ).length > 0;
-    val out = new SparkVertexBuilt(id, wasBuilt);
-
-    val edgeremove = new HashSet[Any]();
-    for (b <- buildSeq) {
-      if (b.isRemoval && b.isEdge) {
-        edgeremove += b.getEdgeId;
-      }
-    }
-
     for (b <- buildSeq) {
       if (b.isRemoval && !b.isEdge) {
         return new DeletedVertex(id);
       }
-      if (b.isEdge && !b.isProperty) {
-        if ( !edgeremove.contains(b.getEdgeId)) {
-          out.edgeSet += new SparkEdge(b.getEdgeId.asInstanceOf[Long], b.getVertexId.asInstanceOf[Long], b.getVertexInId.asInstanceOf[Long], b.getLabel, null, null, null);
-        } else {
-          out.edgeSet += new DeletedEdge(b.getEdgeId.asInstanceOf[Long]);
-        }
-      }
     }
 
+    //Check if there was an actual request to build the vertex, because it
+    //could be a bunch of property additions
+    val wasBuilt = buildSeq.filter( _.isInstanceOf[VertexBuild] ).length > 0;
+    val out = new BuiltVertex(id, wasBuilt);
     for (b <- buildSeq) {
-      if (b.isProperty) {
-        if (b.isEdge) {
-          out.edgeSet.foreach( x => {
-            if (x.id == b.getEdgeId) {
-              x.setProperty(b.getKey, b.getValue.asInstanceOf[AnyRef]);
-            }
-          });
-        } else {
+      if (!b.isEdge) {
+        if (b.isProperty) {
           out.setProperty(b.getKey, b.getValue.asInstanceOf[AnyRef]);
         }
       }
     }
-    //println(out.getPropertyKeys.toArray().mkString(" "))
     return out;
   }
 
   def edgeBuild(id:Long, buildSeq:Seq[BuildElement]) : SparkEdge = {
+    for (b <- buildSeq) {
+      if (b.isRemoval && b.isEdge) {
+        return new DeletedEdge(id);
+      }
+    }
 
-    null
+    val wasBuilt = buildSeq.filter( _.isInstanceOf[EdgeBuild] ).length > 0;
+    val out = if (wasBuilt) {
+      val b = buildSeq.filter( _.isInstanceOf[EdgeBuild] )(0);
+      new BuiltEdge(b.getEdgeId.asInstanceOf[Long], true, b.getVertexId.asInstanceOf[Long], b.getVertexInId.asInstanceOf[Long], b.getLabel)
+    } else {
+      new BuiltEdge(id, false);
+    }
+
+    for (b <- buildSeq) {
+      if (b.isEdge) {
+        if (b.isProperty) {
+          out.setProperty(b.getKey, b.getValue.asInstanceOf[AnyRef]);
+        }
+      }
+    }
+    return out;
   }
 
   def mergeVertex(originalVertexSet:Seq[SparkVertex], newVertexSet:Seq[SparkVertex]) : SparkVertex = {
-
     if ( !(originalVertexSet.length == 0 || originalVertexSet.length == 1) || !(newVertexSet.length == 0 || newVertexSet.length == 1) ) {
       return null;
     }
@@ -82,13 +89,10 @@ object SparkGraphBuilder {
     if (newVertex != null && newVertex.isInstanceOf[DeletedVertex]) {
       return null;
     }
-    if (originalVertex == null && newVertex != null && !newVertex.asInstanceOf[SparkVertexBuilt].wasBuilt ) {
+    if (originalVertex == null && newVertex != null && !newVertex.asInstanceOf[BuiltVertex].wasBuilt ) {
       return null;
     }
-    val rmSet = if (newVertex != null)
-      newVertex.edgeSet.filter( _.isInstanceOf[DeletedEdge]).map(_.id).toSet;
-    else
-      Set[Long]()
+
     var out : SparkVertex = if (originalVertex == null) {
       new SparkVertex(newVertex.getId.asInstanceOf[Long], null);
     } else {
@@ -96,20 +100,53 @@ object SparkGraphBuilder {
       for ( k <- originalVertex.getPropertyKeys.asScala) {
         tmp.setProperty(k, originalVertex.getProperty(k));
       }
-      tmp.edgeSet ++= originalVertex.edgeSet.filter( x => !rmSet.contains(x.id) );
       tmp;
     }
     if (newVertex != null) {
       for ( k <- newVertex.getPropertyKeys.asScala) {
         out.setProperty(k, newVertex.getProperty(k));
       }
-      out.edgeSet ++= newVertex.edgeSet.filter( x => !rmSet.contains(x.id) );
     }
     return out;
   }
 
-  def mergeEdge(originalVertexSet:Seq[SparkEdge], newVertexSet:Seq[SparkEdge]) : SparkEdge = {
-    null
+  def mergeEdge(originalEdgeSet:Seq[SparkEdge], newEdgeSet:Seq[SparkEdge]) : SparkEdge = {
+    if ( !(originalEdgeSet.length == 0 || originalEdgeSet.length == 1) || !(newEdgeSet.length == 0 || newEdgeSet.length == 1) ) {
+      return null;
+    }
+
+    val newEdge = newEdgeSet.length match {
+      case 0 => null : SparkEdge;
+      case 1 => newEdgeSet.head
+    }
+
+    val originalEdge = originalEdgeSet.length match {
+      case 0 => null : SparkEdge;
+      case 1 => originalEdgeSet.head
+    }
+
+    if (newEdge != null && newEdge.isInstanceOf[DeletedEdge]) {
+      return null;
+    }
+    if (originalEdge == null && newEdge != null && !newEdge.asInstanceOf[BuiltEdge].wasBuilt ) {
+      return null;
+    }
+
+    var out : SparkEdge = if (originalEdge == null) {
+      new SparkEdge(newEdge.getId.asInstanceOf[Long], newEdge.outVertexId, newEdge.inVertexId, newEdge.label, null);
+    } else {
+      val tmp = new SparkEdge(originalEdge.getId.asInstanceOf[Long], originalEdge.outVertexId, originalEdge.inVertexId, originalEdge.label, null);
+      for ( k <- originalEdge.getPropertyKeys.asScala) {
+        tmp.setProperty(k, originalEdge.getProperty(k));
+      }
+      tmp;
+    }
+    if (newEdge != null) {
+      for ( k <- newEdge.getPropertyKeys.asScala) {
+        out.setProperty(k, newEdge.getProperty(k));
+      }
+    }
+    return out;
   }
 
   def buildGraph(sc:SparkContext, input:Iterator[BuildElement]) : SparkGraph = {

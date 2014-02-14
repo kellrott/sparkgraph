@@ -90,16 +90,16 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     val out = new ArrayBuffer[SparkEdge]();
     if (direction == Direction.OUT || direction == Direction.BOTH) {
       if (graph != null) {
-        var outgoing = graph.graph.vertices.filter( x => x._1 == id ).flatMap( x => x._2.edgeSet );
+        var outgoing = graph.graph.edges.filter( x => x.srcId == id ).map( _.attr );
         if (labels.length > 0) {
           outgoing = outgoing.filter( x=>labels.contains(x.label) );
         }
         out ++= outgoing.collect();
       } else {
         if (labels.length > 0) {
-          out ++= edgeSet.filter( x => labels.contains(x.label) )
+          out ++= edgeSet.filter( x => labels.contains(x.label) && x.outVertexId == id )
         } else {
-          out ++= edgeSet
+          out ++= edgeSet.filter( x => x.outVertexId == id )
         }
       }
     }
@@ -107,7 +107,7 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
       if (graph == null) {
         throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
       }
-      var incoming = graph.graph.edges.filter( x => x.dstId == id ).map(_.asInstanceOf[SparkEdge])
+      var incoming = graph.graph.edges.filter( x => x.dstId == id ).map( _.attr )
       if (labels.length > 0) {
         incoming = incoming.filter( x=>labels.contains(x.label) );
       }
