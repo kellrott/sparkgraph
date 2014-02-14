@@ -63,14 +63,14 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     }
     val idSet = new ArrayBuffer[Long]();
     if ( direction == Direction.IN || direction == Direction.BOTH ) {
-      var incoming = graph.graph.edges.filter( _.dstId == id ).map( _.asInstanceOf[SparkEdge] );
+      var incoming = graph.graph.edges.filter( _.dstId == id ).map( _.attr );
       if (labels.length > 0) {
         incoming = incoming.filter( _.labelMatch(labels:_*) );
       }
       idSet ++= incoming.map( _.outVertexId ).collect();
     }
     if ( direction == Direction.OUT || direction == Direction.BOTH ) {
-      var outgoing = graph.graph.edges.filter( _.srcId == id ).map( _.asInstanceOf[SparkEdge] );
+      var outgoing = graph.graph.edges.filter( _.srcId == id ).map( _.attr );
       if (labels.length > 0) {
         outgoing = outgoing.filter(_.labelMatch(labels:_*));
       }

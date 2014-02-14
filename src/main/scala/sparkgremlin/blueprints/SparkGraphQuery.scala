@@ -73,7 +73,7 @@ class SparkGraphQuery(val graph:SparkGraph) extends BaseQuery with GraphQuery {
   def edges(): java.lang.Iterable[Edge] = {
     graph.flushUpdates();
     //hasContainers.foreach( println );
-    var rdd = graph.graphX().edges.map( _.asInstanceOf[SparkEdge] )
+    var rdd = graph.graphX().edges.map( _.attr )
     for ( has <- hasContainers ) {
       rdd = has.predicate match {
         case Compare.EQUAL => {

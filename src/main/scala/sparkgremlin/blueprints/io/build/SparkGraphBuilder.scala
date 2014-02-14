@@ -56,7 +56,7 @@ object SparkGraphBuilder {
     val wasBuilt = buildSeq.filter( _.isInstanceOf[EdgeBuild] ).length > 0;
     val out = if (wasBuilt) {
       val b = buildSeq.filter( _.isInstanceOf[EdgeBuild] )(0);
-      new BuiltEdge(b.getEdgeId.asInstanceOf[Long], true, b.getVertexId.asInstanceOf[Long], b.getVertexInId.asInstanceOf[Long], b.getLabel)
+      new BuiltEdge(id, true, b.getVertexId.asInstanceOf[Long], b.getVertexInId.asInstanceOf[Long], b.getLabel)
     } else {
       new BuiltEdge(id, false);
     }

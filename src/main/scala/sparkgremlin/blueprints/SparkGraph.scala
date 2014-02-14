@@ -72,17 +72,9 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
   def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge]) = {
     this(vertices, edges, StorageLevel.MEMORY_ONLY)
   }
-  //val vertRDD = VertexRDD(vertices);
-  //val edgeRDD = createEdgeRDD(edges)
+
   var graph : GraphXGraph[SparkVertex,SparkEdge] = GraphXGraph(vertices, edges.asInstanceOf[RDD[GraphXEdge[AnyRef]]]).asInstanceOf[GraphXGraph[SparkVertex,SparkEdge]];
 
-  /*
-  def this(graph:RDD[(Long,SparkVertex)]) = {
-    this(graph, StorageLevel.MEMORY_ONLY)
-  }
-  */
-
-  //var curgraph : RDD[(Long,SparkVertex)] = graph.persist(defaultStorage);
   var updates = new ArrayBuffer[BuildElement]();
 
   override def toString() = "sparkgraph[nodes=" + graph.vertices.count + "]"
@@ -102,6 +94,7 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
     val nextEdges = graph.edges.map( x => (x.attr.id, x.attr) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1, x._2._2) ).filter( _ != null ).map( x => new GraphXEdge(x.outVertexId, x.inVertexId, x) )
 
     graph = GraphXGraph(nextVerts, nextEdges)
+
     updates.clear();
     return true;
   }
@@ -160,7 +153,7 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
    * @param edge
    */
   def removeEdge(edge: Edge) {
-    updates += new EdgeRemoveBuild(edge.getId.asInstanceOf[Long], edge.asInstanceOf[SparkEdge].outVertexId);
+    updates += new EdgeRemoveBuild(edge.getId.asInstanceOf[Long]);
   }
 
   /**
@@ -168,6 +161,10 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
    * @param vertex
    */
   def removeVertex(vertex: Vertex) {
+    val vertID = vertex.getId.asInstanceOf[Long].toLong
+    for ( y <- graph.edges.filter( x => x.attr.inVertexId == vertID || x.attr.outVertexId == vertID ).map( _.attr.id ).collect()) {
+      updates += new EdgeRemoveBuild(y)
+    }
     updates += new VertexRemoveBuild(vertex.getId.asInstanceOf[Long]);
   }
 
@@ -203,7 +200,6 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
   }
 
   def addEdge(id: Any, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
-    //println("Add Edge: " + id)
     if (label == null) {
       throw new IllegalArgumentException("Null Label");
     }
@@ -223,7 +219,6 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
 
   def getEdges: Iterable[Edge] = {
     flushUpdates();
-    println(graph.edges.count())
     val out = graph.edges.map( x => x.attr );
     return new SimpleGraphElementSet[SparkEdge](this, out, classOf[SparkEdge]).asInstanceOf[Iterable[Edge]];
   }
@@ -231,7 +226,7 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
     val out = graph.edges.filter( _.attr.labelMatch(key, value.toString) );
-    return new SimpleGraphElementSet[Edge](this, out.map(_.asInstanceOf[SparkEdge]), classOf[SparkEdge]);
+    return new SimpleGraphElementSet[Edge](this, out.map(_.attr), classOf[SparkEdge]);
   }
 
   def query(): GraphQuery = {

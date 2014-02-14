@@ -63,7 +63,7 @@ class SparkEdge(
     if (graph == null) {
       throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
     }
-    graph.updates += new EdgeRemoveBuild(id, outVertexId);
+    graph.updates += new EdgeRemoveBuild(id);
   }
 
   /**
