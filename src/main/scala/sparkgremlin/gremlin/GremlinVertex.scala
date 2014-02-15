@@ -39,7 +39,6 @@ class GremlinVertex extends Serializable {
     this();
     travelerCount = count;
   }
-  var validEdges : Array[AnyRef] = null;
   var travelers : Array[GremlinTraveler] = null;
   var travelerCount = 0;
 }

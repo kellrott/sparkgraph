@@ -1,14 +1,15 @@
 package sparkgremlin.gremlin
 
-import sparkgremlin.blueprints.{SparkVertex, SparkGraphElementSet}
+import sparkgremlin.blueprints.{SparkEdge, SparkVertex, SparkGraphElementSet}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.graphx
 
 /**
  * Created by kellrott on 2/8/14.
  */
 abstract class SparkGraphBulkData[E](
                                       val graphData : SparkGraphElementSet[_],
-                                      val vertexData : RDD[(Long, (SparkVertex,GremlinVertex))],
+                                      val stateGraph : graphx.Graph[(SparkVertex,GremlinVertex), (SparkEdge,Boolean)],
                                       val asColumns: Array[String],
                                       val elementType : BulkDataType.Value,
                                       val extractKey : String) extends BulkPipeData[E]

@@ -2,12 +2,13 @@ package sparkgremlin.gremlin.pipe
 
 //import collection.JavaConverters._
 
-import sparkgremlin.blueprints.{SparkVertex, SparkGraphElement}
+import sparkgremlin.blueprints.{SparkEdge, SparkVertex, SparkGraphElement}
 import com.tinkerpop.blueprints.Predicate
 import com.tinkerpop.pipes.util.PipeHelper
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
 import sparkgremlin.gremlin._
+import org.apache.spark.graphx
 
 /**
  * Created by kellrott on 2/8/14.
@@ -26,29 +27,20 @@ object SparkPropertyFilterPipe {
      return out;
    }
 
-   def filterEdges( vert: SparkVertex, state : GremlinVertex, key:String, predicate: Predicate, value: AnyRef) : GremlinVertex = {
-     val newState = new GremlinVertex();
-     newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.getProperty(key), value) ).map( _.id.asInstanceOf[AnyRef] ).toArray
-     return newState;
+   def filterEdges( edge: SparkEdge, key:String, predicate: Predicate, value: AnyRef) : Boolean = {
+     return predicate.evaluate(edge.getProperty(key), value)
    }
 
-   def filterEdgesLabels( vert: SparkVertex, state : GremlinVertex, predicate: Predicate, value: AnyRef) : GremlinVertex = {
-     val newState = new GremlinVertex();
-     newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.label, value) ).map( _.id.asInstanceOf[AnyRef] ).toArray
-     return newState;
+   def filterEdgesLabels( edge: SparkEdge, predicate: Predicate, value: AnyRef) : Boolean = {
+     return predicate.evaluate(edge.label, value)
    }
 
-   def filterEdgesID( vert:SparkVertex, state: GremlinVertex, predicate: Predicate, value: AnyRef) : GremlinVertex = {
-     val newState = new GremlinVertex();
+   def filterEdgesID( edge:SparkEdge, predicate: Predicate, value: AnyRef) : Boolean = {
      val vid : java.lang.Long = value match {
        case x : java.lang.Long => x;
        case _ => value.toString.toLong
      }
-     newState.travelers = state.travelers
-     newState.validEdges = vert.edgeSet.filter( x => predicate.evaluate(x.id, vid) ).map( _.id.asInstanceOf[AnyRef] ).toArray
-     return newState;
+     return predicate.evaluate(edge.id, vid)
    }
  }
 
@@ -88,14 +80,14 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           this.value
         }
-        val step = y.vertexData.filter( x => SparkPropertyFilterPipe.filterVertexID( x._2._1, x._2._2, searchPredicate, searchValue ))
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+        val step = y.stateGraph.vertices.filter( x => SparkPropertyFilterPipe.filterVertexID( x._2._1, x._2._2, searchPredicate, searchValue ))
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
           def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).map(_._2._1)
         }
       } else {
         val searchValue = value
-        val step = y.vertexData.filter( x => SparkPropertyFilterPipe.filterVertex(x._2._1, x._2._2, searchKey, searchPredicate, searchValue ))
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+        val step = y.stateGraph.vertices.filter( x => SparkPropertyFilterPipe.filterVertex(x._2._1, x._2._2, searchKey, searchPredicate, searchValue ))
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
           def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX.vertices.join(step).map(_._2._1)
         }
       }
@@ -107,23 +99,25 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           value ;
         }
-        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._1, x._2._2, searchPredicate, searchValue)) ));
+        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdgesLabels(x.attr._1, searchPredicate, searchValue) ) ) );
       } else if (id != null || key == "id") {
         val searchValue = if (id != null) {
           id;
         } else {
           value;
         }
-        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdgesID(x._2._1, x._2._2, searchPredicate, searchValue)) ) );
+        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdgesID(x.attr._1, searchPredicate, searchValue)) ) );
       } else {
         val searchValue = value
-        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdges(x._2._1, x._2._2, searchKey, searchPredicate, searchValue)) ));
+        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdges(x.attr._1, searchKey, searchPredicate, searchValue)) ));
       }
       return new SparkGraphBulkData[SparkGraphElement](
-        y.graphData, step, y.asColumns, BulkDataType.EDGE_DATA, null
+        y.graphData, graphx.Graph(y.stateGraph.vertices, step), y.asColumns, BulkDataType.EDGE_DATA, null
       ) {
-        //def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).flatMap( x => x._2._1.edgeSet.filter( y => x._2._2.validEdges.contains(y.id)  ) )
-        def currentRDD() : RDD[SparkGraphElement] = null;
+        def currentRDD(): RDD[SparkGraphElement] = {
+          y.stateGraph.edges.filter( _.attr._2 ).map( _.attr._1 )
+          //y.stateGraph.vertices.filter( _._2 != null ).join(step).flatMap( x => x._2._1.edgeSet.filter( y => x._2._2.validEdges.contains(y.id)  ) )
+        }
       }
     }
     return null;

@@ -19,7 +19,7 @@ class SparkGraphTablePipe[S](var table: Table, columnFunctions: SparkGremlinPipe
      }
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[S]];
      table.setColumnNames(bs.asColumns:_*);
-     val data = bs.vertexData.filter( _._2._2.travelers != null ).flatMap( _._2._2.travelers ).collect()
+     val data = bs.stateGraph.vertices.filter( _._2._2.travelers != null ).flatMap( _._2._2.travelers ).collect()
        data.foreach( x => {
        val y = bs.asColumns.map( z => x.asColumnMap(z) );
        if (columnFunctions != null) {
