@@ -18,8 +18,8 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
 
    def bulkProcess(): BulkPipeData[SparkVertex] = {
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
-     bs.stateGraph.vertices.collect().foreach(println)
-     bs.stateGraph.triplets.collect().foreach(println(_))
+     //bs.stateGraph.vertices.collect().foreach(println)
+     //bs.stateGraph.triplets.collect().foreach(println(_))
      val outvert = bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
        x => {
          if (x.srcAttr._2 != null) {
