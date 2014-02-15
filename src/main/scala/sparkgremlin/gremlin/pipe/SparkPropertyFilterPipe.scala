@@ -111,12 +111,12 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         val searchValue = value
         y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdges(x.attr._1, searchKey, searchPredicate, searchValue)) ));
       }
+      val newStateGraph = graphx.Graph(y.stateGraph.vertices, step)
       return new SparkGraphBulkData[SparkGraphElement](
-        y.graphData, graphx.Graph(y.stateGraph.vertices, step), y.asColumns, BulkDataType.EDGE_DATA, null
+        y.graphData, newStateGraph, y.asColumns, BulkDataType.EDGE_DATA, null
       ) {
         def currentRDD(): RDD[SparkGraphElement] = {
-          y.stateGraph.edges.filter( _.attr._2 ).map( _.attr._1 )
-          //y.stateGraph.vertices.filter( _._2 != null ).join(step).flatMap( x => x._2._1.edgeSet.filter( y => x._2._2.validEdges.contains(y.id)  ) )
+          newStateGraph.edges.filter( _.attr._2 ).map( _.attr._1 )
         }
       }
     }
