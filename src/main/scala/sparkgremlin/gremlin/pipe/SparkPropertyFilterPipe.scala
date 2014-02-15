@@ -88,17 +88,15 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           this.value
         }
-        val step = y.graphState.join( y.graphData.graphX().vertices ).filter( x => SparkPropertyFilterPipe.filterVertexID(x._2._2, x._2._1, searchPredicate, searchValue ))
-        val newstate = step.map( x => (x._1, x._2._1) );
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, newstate, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
-          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(newstate).map(_._2._1)
+        val step = y.vertexData.filter( x => SparkPropertyFilterPipe.filterVertexID( x._2._1, x._2._2, searchPredicate, searchValue ))
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).map(_._2._1)
         }
       } else {
         val searchValue = value
-        val step = y.graphState.join( y.graphData.graphX.vertices ).filter( x => SparkPropertyFilterPipe.filterVertex(x._2._2, x._2._1, searchKey, searchPredicate, searchValue ))
-        val newstate = step.map( x => (x._1, x._2._1) )
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, newstate, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
-          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX.vertices.join(newstate).map(_._2._1)
+        val step = y.vertexData.filter( x => SparkPropertyFilterPipe.filterVertex(x._2._1, x._2._2, searchKey, searchPredicate, searchValue ))
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX.vertices.join(step).map(_._2._1)
         }
       }
     }
@@ -109,22 +107,23 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           value ;
         }
-        y.graphState.join( y.graphData.graphX().vertices ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._2, x._2._1, searchPredicate, searchValue)) );
+        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdgesLabels(x._2._1, x._2._2, searchPredicate, searchValue)) ));
       } else if (id != null || key == "id") {
         val searchValue = if (id != null) {
           id;
         } else {
           value;
         }
-        y.graphState.join( y.graphData.graphX().vertices ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdgesID(x._2._2, x._2._1, searchPredicate, searchValue)) );
+        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdgesID(x._2._1, x._2._2, searchPredicate, searchValue)) ) );
       } else {
         val searchValue = value
-        y.graphState.join( y.graphData.graphX().vertices ).map( x=> (x._1, SparkPropertyFilterPipe.filterEdges(x._2._2, x._2._1, searchKey, searchPredicate, searchValue)) );
+        y.vertexData.map( x=> (x._1, (x._2._1, SparkPropertyFilterPipe.filterEdges(x._2._1, x._2._2, searchKey, searchPredicate, searchValue)) ));
       }
       return new SparkGraphBulkData[SparkGraphElement](
         y.graphData, step, y.asColumns, BulkDataType.EDGE_DATA, null
       ) {
-        def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).flatMap( x => x._2._1.edgeSet.filter( y => x._2._2.validEdges.contains(y.id)  ) )
+        //def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).flatMap( x => x._2._1.edgeSet.filter( y => x._2._2.validEdges.contains(y.id)  ) )
+        def currentRDD() : RDD[SparkGraphElement] = null;
       }
     }
     return null;

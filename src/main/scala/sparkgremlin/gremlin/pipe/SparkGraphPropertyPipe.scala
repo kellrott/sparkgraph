@@ -19,7 +19,7 @@ class SparkGraphPropertyPipe[S <: SparkGraphElement](name:String) extends BulkPi
        case BulkDataType.EDGE_DATA => BulkDataType.VERTEX_PROP_DATA
      }
      return new SparkGraphBulkData[AnyRef](
-       bs.graphData, bs.graphState, bs.asColumns, elType, name
+       bs.graphData, bs.vertexData, bs.asColumns, elType, name
      ) {
        override def currentRDD(): RDD[AnyRef] = {
          val n = name;

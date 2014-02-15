@@ -15,28 +15,24 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : BulkDataType.Value) exte
    }
 
    def bulkProcess() : BulkPipeData[E] = {
-     throw new RuntimeException("FIX THIS CLASS!!!")
-     /*
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
      if (cls == BulkDataType.VERTEX_DATA) {
        val active_ids = bs.graphData.elementRDD().map( x => (x.asInstanceOf[SparkVertex].id, true) );
        return new SparkGraphBulkData[E](
          bs.graphData,
-         bs.graphData.graphRDD().join( active_ids ).map( x => (x._1, new GremlinVertex(1)) ),
+         bs.graphData.graphX().vertices.join( active_ids ).map( x => (x._1, (x._2._1, new GremlinVertex(1)) ) ),
          bs.asColumns, BulkDataType.VERTEX_DATA, null ) {
-         def currentRDD(): RDD[E] = bs.graphData.graphRDD().map( _._2 ).asInstanceOf[RDD[E]]
+         def currentRDD(): RDD[E] = bs.graphData.graphX().vertices.map( _._2 ).asInstanceOf[RDD[E]]
        }
      } else if (cls == BulkDataType.EDGE_DATA) {
        return new SparkGraphBulkData[E](
          bs.graphData,
-         bs.graphData.graphRDD().map( x => (x._1, new GremlinVertex(1)) ),
+         bs.graphData.graphX().vertices.map( x => (x._1, (x._2, new GremlinVertex(1))) ),
          bs.asColumns, cls, null
        ) {
-         def currentRDD(): RDD[E] = bs.graphData.graphRDD().flatMap( _._2.edgeSet ).asInstanceOf[RDD[E]];
+         def currentRDD(): RDD[E] = bs.graphData.graphX().edges.map( _.attr ).asInstanceOf[RDD[E]];
        }
      }
      return null;
-     */
    }
-
  }
