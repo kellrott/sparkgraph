@@ -28,7 +28,7 @@ class SparkGraphSONParser {
         val edgeArray = v.asInstanceOf[java.util.ArrayList[AnyRef]];
         for ( edgeElement <- edgeArray.asScala ) {
           val edgeData = edgeElement.asInstanceOf[java.util.Map[String,AnyRef]]
-          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV").asInstanceOf[Long], null))
+          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV").toString.toLong, null))
           for ( (ek,ev) <- edgeData.asScala ) {
             if (ek == "_id") {
             } else if (ek == "_label") {

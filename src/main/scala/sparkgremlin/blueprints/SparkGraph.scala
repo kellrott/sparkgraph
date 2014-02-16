@@ -20,7 +20,7 @@ import sparkgremlin.blueprints.io._
 import sparkgremlin.blueprints.io.build._
 
 import org.apache.spark.graphx.impl.{GraphImpl => GraphXImplGraph, EdgePartitionBuilder}
-import org.apache.spark.graphx.{Graph => GraphXGraph, Edge => GraphXEdge, VertexRDD, EdgeRDD}
+import org.apache.spark.graphx
 import scala.reflect.ClassTag
 import com.tinkerpop.blueprints.Edge
 
@@ -67,13 +67,15 @@ object SparkGraph {
   }
 }
 
-class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
 
-  def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge]) = {
-    this(vertices, edges, StorageLevel.MEMORY_ONLY)
+  def this(graph : graphx.Graph[SparkVertex,SparkEdge]) = {
+    this(graph, StorageLevel.MEMORY_ONLY)
   }
 
-  var graph : GraphXGraph[SparkVertex,SparkEdge] = GraphXGraph(vertices, edges.asInstanceOf[RDD[GraphXEdge[AnyRef]]]).asInstanceOf[GraphXGraph[SparkVertex,SparkEdge]];
+  def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge]) = {
+    this(graphx.Graph(vertices, edges.map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )), StorageLevel.MEMORY_ONLY)
+  }
 
   var updates = new ArrayBuffer[BuildElement]();
 
@@ -91,9 +93,9 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
     val newEdges =  u.filter(  _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => (x._1, SparkGraphBuilder.edgeBuild(x._1, x._2)));
 
     val nextVerts = graph.vertices.cogroup( newVertex ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null)
-    val nextEdges = graph.edges.map( x => (x.attr.id, x.attr) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1, x._2._2) ).filter( _ != null ).map( x => new GraphXEdge(x.outVertexId, x.inVertexId, x) )
+    val nextEdges = graph.edges.map( x => (x.attr.id, x.attr) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1, x._2._2) ).filter( _ != null ).map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )
 
-    graph = GraphXGraph(nextVerts, nextEdges)
+    graph = graphx.Graph(nextVerts, nextEdges)
 
     updates.clear();
     return true;
@@ -196,6 +198,7 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
 
   def getVertices(key: String, value: scala.Any): Iterable[Vertex] = {
     flushUpdates();
+    graph.vertices.collect().foreach(println)
     return graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2.asInstanceOf[Vertex]).collect().toIterable.asJava;
   }
 
@@ -260,7 +263,7 @@ class SparkGraph(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], default
   }
 
   def remove() = {};
-  def graphX(): GraphXGraph[SparkVertex,SparkEdge] = {
+  def graphX(): graphx.Graph[SparkVertex,SparkEdge] = {
     flushUpdates()
     graph
   };

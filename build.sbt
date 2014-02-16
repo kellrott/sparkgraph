@@ -14,7 +14,8 @@ libraryDependencies ++= Seq(
 	"com.tinkerpop" % "pipes" % "2.4.0",
 	"com.tinkerpop.gremlin" % "gremlin-java" % "2.4.0",
 	"com.tinkerpop.gremlin" % "gremlin-test" % "2.4.0" % "test",
-	"com.novocode" % "junit-interface" % "0.9" % "test"
+	"org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+    "com.novocode" % "junit-interface" % "0.9" % "test"
 )	
 
 resolvers ++= Seq(
@@ -22,7 +23,6 @@ resolvers ++= Seq(
     "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
     "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases"
 )
-
 
 assemblySettings
 

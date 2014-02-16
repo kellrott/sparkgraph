@@ -1,24 +1,15 @@
 package sparkgremlin.test;
 
 import com.tinkerpop.blueprints.*;
-import com.tinkerpop.blueprints.impls.GraphTest;
-import com.tinkerpop.blueprints.util.io.gml.GMLReaderTestSuite;
-import com.tinkerpop.blueprints.util.io.graphml.GraphMLReaderTestSuite;
-import com.tinkerpop.blueprints.util.io.graphson.GraphSONReaderTestSuite;
 import junit.framework.TestCase;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.storage.StorageLevel;
 import sparkgremlin.blueprints.SparkGraph;
-import sparkgremlin.blueprints.hadoop.SparkGraphHadoop;
+import sparkgremlin.blueprints.hadoop.GraphSON;
 
 
-import java.lang.reflect.Method;
 import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
 
 public class SparkHadoopFileTest extends TestCase {
 
@@ -53,8 +44,8 @@ public class SparkHadoopFileTest extends TestCase {
     }
 
     public void testFileSaveLoad() throws Exception {
-        SparkGraphHadoop.saveAsHadoopGraphSON("test_graph", g);
-        SparkGraph ng = SparkGraphHadoop.loadHadoopGraphSON("test_graph", sc, StorageLevel.MEMORY_ONLY());
+        GraphSON.save("test_graph", g);
+        SparkGraph ng = GraphSON.load("test_graph", sc, StorageLevel.MEMORY_ONLY());
         Iterator<Vertex> o1 = ng.getVertices("name", "marko").iterator();
         assertTrue(o1.hasNext());
         Vertex v1 = o1.next();
