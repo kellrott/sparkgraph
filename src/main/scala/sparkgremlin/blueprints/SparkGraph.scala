@@ -196,10 +196,9 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     return new SimpleGraphElementSet[Vertex](this, graph.vertices.map( _._2 ), classOf[SparkVertex] );
   }
 
-  def getVertices(key: String, value: scala.Any): Iterable[Vertex] = {
+  def getVertices(key: String, value: scala.Any): java.lang.Iterable[Vertex] = {
     flushUpdates();
-    graph.vertices.collect().foreach(println)
-    return graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2.asInstanceOf[Vertex]).collect().toIterable.asJava;
+    return new SimpleGraphElementSet[Vertex](this, graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2), classOf[SparkVertex] )
   }
 
   def addEdge(id: Any, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {

@@ -28,7 +28,13 @@ object GraphSON {
   def load(path: String, sc : SparkContext, defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) : SparkGraph = {
     val rdd = sc.newAPIHadoopFile[Long, SparkVertex, SparkGraphSONInputFormat](path);
     val edges = rdd.flatMap( x => x._2.edgeSet ).map( x => graphx.Edge( x.outVertexId, x.inVertexId, x ) )
-    val gr = new SparkGraph( graphx.Graph(rdd, edges) )
+    val gr = new SparkGraph( graphx.Graph(rdd, edges).mapVertices( (vid,attr) => {
+      if (attr != null) {
+        attr
+      } else {
+        new SparkVertex(vid, null)
+      }
+    }) )
     return gr;
   }
 }
