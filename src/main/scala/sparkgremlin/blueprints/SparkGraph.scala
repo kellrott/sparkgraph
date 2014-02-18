@@ -271,4 +271,29 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     //return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
     return graph.vertices.map( _._2 )
   }
+
+  def getCachedVertices(dir : Direction) : RDD[SparkVertex] = {
+    val flatRDD = graph.mapReduceTriplets[SparkVertex](  x => {
+      val o_src = new SparkVertex(x.srcAttr.id, null)
+      val o_dst = new SparkVertex(x.dstAttr.id, null)
+      x.srcAttr.propMap.foreach( x => o_src.propMap(x._1) = x._2 )
+      x.dstAttr.propMap.foreach( x => o_dst.propMap(x._1) = x._2 )
+      if (dir == Direction.OUT) {
+        o_src.edgeSet += x.attr
+      } else if (dir == Direction.IN) {
+        o_dst.edgeSet += x.attr
+      } else {
+        o_src.edgeSet += x.attr
+        o_dst.edgeSet += x.attr
+      }
+      Iterator((x.srcId, o_src),(x.dstId,o_dst))
+
+    },
+      (y,z) => {
+        y.edgeSet ++= z.edgeSet;
+        y
+    })
+    flatRDD.map( _._2 )
+  }
+
 }
