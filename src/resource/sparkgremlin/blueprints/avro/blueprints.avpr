@@ -1,0 +1,54 @@
+{
+  "protocol" : "Blueprints",
+  "namespace" : "sparkgremlin.blueprints.avro",
+  "types" : [ {
+    "type" : "record",
+    "name" : "Property",
+    "fields" : [ {
+      "name" : "key",
+      "type" : "string"
+    }, {
+      "name" : "value",
+      "type" : [ "long", "string" ]
+    } ]
+  }, {
+    "type" : "record",
+    "name" : "AvroEdge",
+    "fields" : [ {
+      "name" : "id",
+      "type" : "long"
+    }, {
+      "name" : "label",
+      "type" : "string"
+    }, {
+      "name" : "src",
+      "type" : "long"
+    }, {
+      "name" : "dest",
+      "type" : "long"
+    }, {
+      "name" : "props",
+      "type" : {
+        "type" : "array",
+        "items" : "Property"
+      }
+    } ]
+  }, {
+    "type" : "record",
+    "name" : "AvroVertex",
+    "fields" : [ {
+      "name" : "id",
+      "type" : "long"
+    }, {
+      "name" : "name",
+      "type" : "string"
+    }, {
+      "name" : "props",
+      "type" : {
+        "type" : "array",
+        "items" : "Property"
+      }
+    } ]
+  } ],
+  "messages" : { }
+}

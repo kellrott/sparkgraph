@@ -1,0 +1,29 @@
+// Compile:
+// java -jar avro-tools-1.7.6.jar idl src/resource/sparkgremlin/blueprints/avro/blueprints.avdl src/resource/sparkgremlin/blueprints/avro/blueprints.avpr
+// java -jar avro-tools-1.7.6.jar compile protocol src/resource/sparkgremlin/blueprints/avro/blueprints.avpr src/main/java/
+@namespace("sparkgremlin.blueprints.avro")
+protocol Blueprints {
+
+record Property {
+	string key;
+	union { long, string } value;
+}
+
+record AvroEdge {
+    long id;
+    string label;
+	long src;
+	long dest;
+	array<Property> props;
+}
+
+
+record AvroVertex {
+    // ID
+    long id;
+	// Name 
+	string name;
+	array<Property> props;
+}
+
+}
