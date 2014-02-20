@@ -65,6 +65,30 @@ object SparkGraph {
   def generate(sc:SparkContext) : SparkGraph = {
     return new SparkGraph(sc.parallelize(Array[(Long,SparkVertex)]()), sc.parallelize(Array[SparkEdge]()));
   }
+
+  def mergeVertex(vertexId:Long, vset1:Seq[SparkVertex], vset2:Seq[SparkVertex]) : SparkVertex = {
+    var out : SparkVertex = new SparkVertex(vertexId, null);
+    for (a <- vset1) {
+      for ( k <- a.getPropertyKeys.asScala) {
+        out.setProperty(k, a.getProperty(k));
+      }
+    }
+    for (a <- vset2) {
+      for ( k <- a.getPropertyKeys.asScala) {
+        out.setProperty(k, a.getProperty(k));
+      }
+    }
+    return out;
+  }
+
+  def cachedVertices2Graph(vertices: RDD[SparkVertex]) : graphx.Graph[SparkVertex,SparkEdge] = {
+    val edges = vertices.flatMap( x => x.edgeSet ).map( x => graphx.Edge( x.outVertexId, x.inVertexId, x ) )
+    val fringeVerts = vertices.flatMap( x => x.edgeSet.map( y => {val z = y.getVertex(Direction.IN); (z.getId.asInstanceOf[Long], z.asInstanceOf[SparkVertex])  } ) )
+    val rdd = vertices.map( x => (x.getId.asInstanceOf[Long], x) ).cogroup(fringeVerts).map( x => (x._1, mergeVertex(x._1, x._2._1, x._2._2 ) ) )
+    val gr = graphx.Graph(rdd, edges)
+    return gr
+  }
+
 }
 
 class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
@@ -287,7 +311,6 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
         o_dst.edgeSet += x.attr
       }
       Iterator((x.srcId, o_src),(x.dstId,o_dst))
-
     },
       (y,z) => {
         y.edgeSet ++= z.edgeSet;
@@ -295,5 +318,6 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     })
     flatRDD.map( _._2 )
   }
+
 
 }
