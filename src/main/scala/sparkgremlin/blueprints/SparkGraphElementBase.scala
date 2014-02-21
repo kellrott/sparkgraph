@@ -8,6 +8,7 @@ import scala.collection.mutable.HashMap
  */
 abstract class SparkGraphElementBase (val id:Long, @transient var graph:SparkGraph) extends SparkGraphElement with Serializable {
   def getId: AnyRef = id.asInstanceOf[AnyRef];
+  def getID: Long = id
 
   val propMap = new HashMap[String,Any]();
 

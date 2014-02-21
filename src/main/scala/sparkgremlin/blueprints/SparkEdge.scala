@@ -26,6 +26,7 @@ class SparkEdge(
                  ) extends SparkGraphElement with Edge with Serializable {
 
   def getId: AnyRef = id.asInstanceOf[AnyRef];
+  def getID: Long = id
 
   val propMap = new HashMap[String,Any]();
 
