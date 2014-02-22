@@ -69,11 +69,13 @@ object SparkGraph {
   def mergeVertex(vertexId:Long, vset1:Seq[SparkVertex], vset2:Seq[SparkVertex]) : SparkVertex = {
     var out : SparkVertex = new SparkVertex(vertexId, null);
     for (a <- vset1) {
+      out.edgeSet ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k));
       }
     }
     for (a <- vset2) {
+      out.edgeSet ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k));
       }

@@ -21,8 +21,8 @@ class SparkEdge(
                  val inVertexId: Long,
                  val label:String,
                  @transient var graph:SparkGraph,
-                 @transient outVertexCache : Vertex = null,
-                 @transient inVertexCache : Vertex = null
+                 @transient var outVertexCache : Vertex = null,
+                 @transient var inVertexCache : Vertex = null
                  ) extends SparkGraphElement with Edge with Serializable {
 
   def getId: AnyRef = id.asInstanceOf[AnyRef];
