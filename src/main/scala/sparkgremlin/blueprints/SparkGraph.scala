@@ -66,6 +66,19 @@ object SparkGraph {
     return new SparkGraph(sc.parallelize(Array[(Long,SparkVertex)]()), sc.parallelize(Array[SparkEdge]()));
   }
 
+  def reduceVertex(v1:SparkVertex, v2:SparkVertex) : SparkVertex = {
+    var out : SparkVertex = new SparkVertex(v1.getID, null)
+    out.edgeSet ++= v1.edgeSet
+    out.edgeSet ++= v2.edgeSet
+    for ( k <- v1.getPropertyKeys.asScala) {
+      out.setProperty(k, v1.getProperty(k));
+    }
+    for ( k <- v2.getPropertyKeys.asScala) {
+      out.setProperty(k, v2.getProperty(k));
+    }
+    return out
+  }
+
   def mergeVertex(vertexId:Long, vset1:Seq[SparkVertex], vset2:Seq[SparkVertex]) : SparkVertex = {
     var out : SparkVertex = new SparkVertex(vertexId, null);
     for (a <- vset1) {
