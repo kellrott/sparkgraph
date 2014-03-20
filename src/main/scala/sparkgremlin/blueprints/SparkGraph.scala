@@ -65,6 +65,45 @@ object SparkGraph {
   def generate(sc:SparkContext) : SparkGraph = {
     return new SparkGraph(sc.parallelize(Array[(Long,SparkVertex)]()), sc.parallelize(Array[SparkEdge]()));
   }
+
+  def reduceVertex(v1:SparkVertex, v2:SparkVertex) : SparkVertex = {
+    var out : SparkVertex = new SparkVertex(v1.getID, null)
+    out.edgeSet ++= v1.edgeSet
+    out.edgeSet ++= v2.edgeSet
+    for ( k <- v1.getPropertyKeys.asScala) {
+      out.setProperty(k, v1.getProperty(k));
+    }
+    for ( k <- v2.getPropertyKeys.asScala) {
+      out.setProperty(k, v2.getProperty(k));
+    }
+    return out
+  }
+
+  def mergeVertex(vertexId:Long, vset1:Seq[SparkVertex], vset2:Seq[SparkVertex]) : SparkVertex = {
+    var out : SparkVertex = new SparkVertex(vertexId, null);
+    for (a <- vset1) {
+      out.edgeSet ++= a.edgeSet
+      for ( k <- a.getPropertyKeys.asScala) {
+        out.setProperty(k, a.getProperty(k));
+      }
+    }
+    for (a <- vset2) {
+      out.edgeSet ++= a.edgeSet
+      for ( k <- a.getPropertyKeys.asScala) {
+        out.setProperty(k, a.getProperty(k));
+      }
+    }
+    return out;
+  }
+
+  def cachedVertices2Graph(vertices: RDD[SparkVertex]) : graphx.Graph[SparkVertex,SparkEdge] = {
+    val edges = vertices.flatMap( x => x.edgeSet ).map( x => graphx.Edge( x.outVertexId, x.inVertexId, x ) )
+    val fringeVerts = vertices.flatMap( x => x.edgeSet.map( y => {val z = y.getVertex(Direction.IN); (z.getId.asInstanceOf[Long], z.asInstanceOf[SparkVertex])  } ) )
+    val rdd = vertices.map( x => (x.getId.asInstanceOf[Long], x) ).cogroup(fringeVerts).map( x => (x._1, mergeVertex(x._1, x._2._1, x._2._2 ) ) )
+    val gr = graphx.Graph(rdd, edges)
+    return gr
+  }
+
 }
 
 class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
@@ -271,4 +310,29 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     //return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
     return graph.vertices.map( _._2 )
   }
+
+  def getCachedVertices(dir : Direction) : RDD[SparkVertex] = {
+    val flatRDD = graph.mapReduceTriplets[SparkVertex](  x => {
+      val o_src = new SparkVertex(x.srcAttr.id, null)
+      val o_dst = new SparkVertex(x.dstAttr.id, null)
+      x.srcAttr.propMap.foreach( x => o_src.propMap(x._1) = x._2 )
+      x.dstAttr.propMap.foreach( x => o_dst.propMap(x._1) = x._2 )
+      if (dir == Direction.OUT) {
+        o_src.edgeSet += x.attr
+      } else if (dir == Direction.IN) {
+        o_dst.edgeSet += x.attr
+      } else {
+        o_src.edgeSet += x.attr
+        o_dst.edgeSet += x.attr
+      }
+      Iterator((x.srcId, o_src),(x.dstId,o_dst))
+    },
+      (y,z) => {
+        y.edgeSet ++= z.edgeSet;
+        y
+    })
+    flatRDD.map( _._2 )
+  }
+
+
 }
