@@ -64,13 +64,13 @@ object BlueprintParquet {
     ParquetOutputFormat.setWriteSupportClass(job, classOf[AvroWriteSupport])
     AvroParquetOutputFormat.setSchema(job, AvroVertex.SCHEMA$)
 
-    val vertexRDD = gr.graphX().vertices.map(x => (x._1, sparkVertex2Avro(x._2)) )
+    val vertexRDD = gr.graphX().vertices.map(x => (null, sparkVertex2Avro(x._2)) )
 
 
     vertexRDD.saveAsNewAPIHadoopFile(new Path(dpath, "vertices").toString, classOf[Void], classOf[AvroVertex],
       classOf[ParquetOutputFormat[AvroVertex]], job.getConfiguration)
 
-    val edgeRDD = gr.graphX().edges.map( x => (x.attr.getId, sparkEdge2Avro(x.attr)) )
+    val edgeRDD = gr.graphX().edges.map( x => (null, sparkEdge2Avro(x.attr)) )
     AvroParquetOutputFormat.setSchema(job, AvroEdge.SCHEMA$)
     edgeRDD.saveAsNewAPIHadoopFile(new Path(dpath, "edges").toString, classOf[Void], classOf[AvroEdge],
       classOf[ParquetOutputFormat[AvroEdge]], job.getConfiguration)

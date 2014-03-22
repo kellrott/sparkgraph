@@ -21,8 +21,6 @@ record AvroEdge {
 record AvroVertex {
     // ID
     long id;
-	// Name 
-	string name;
 	array<Property> props;
 }
 

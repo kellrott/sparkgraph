@@ -40,9 +40,6 @@
       "name" : "id",
       "type" : "long"
     }, {
-      "name" : "name",
-      "type" : "string"
-    }, {
       "name" : "props",
       "type" : {
         "type" : "array",

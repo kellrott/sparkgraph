@@ -13,10 +13,11 @@ libraryDependencies ++= Seq(
 	"com.tinkerpop.blueprints" % "blueprints-test" % "2.4.0" % "test",
 	"com.tinkerpop" % "pipes" % "2.4.0",
 	"com.tinkerpop.gremlin" % "gremlin-java" % "2.4.0",
-    "com.twitter" % "parquet-avro" % "1.0.0",
+	"com.twitter" % "parquet-avro" % "1.3.2",
+	"org.apache.avro" % "avro" % "1.7.4",
 	"com.tinkerpop.gremlin" % "gremlin-test" % "2.4.0" % "test",
 	"org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-    "com.novocode" % "junit-interface" % "0.9" % "test"
+	"com.novocode" % "junit-interface" % "0.9" % "test"
 )	
 
 resolvers ++= Seq(

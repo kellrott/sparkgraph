@@ -7,10 +7,9 @@ package sparkgremlin.blueprints.avro;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroVertex\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}}}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroVertex\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   @Deprecated public long id;
-  @Deprecated public java.lang.CharSequence name;
   @Deprecated public java.util.List<sparkgremlin.blueprints.avro.Property> props;
 
   /**
@@ -23,9 +22,8 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
   /**
    * All-args constructor.
    */
-  public AvroVertex(java.lang.Long id, java.lang.CharSequence name, java.util.List<sparkgremlin.blueprints.avro.Property> props) {
+  public AvroVertex(java.lang.Long id, java.util.List<sparkgremlin.blueprints.avro.Property> props) {
     this.id = id;
-    this.name = name;
     this.props = props;
   }
 
@@ -34,8 +32,7 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return id;
-    case 1: return name;
-    case 2: return props;
+    case 1: return props;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -44,8 +41,7 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: id = (java.lang.Long)value$; break;
-    case 1: name = (java.lang.CharSequence)value$; break;
-    case 2: props = (java.util.List<sparkgremlin.blueprints.avro.Property>)value$; break;
+    case 1: props = (java.util.List<sparkgremlin.blueprints.avro.Property>)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -63,21 +59,6 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
    */
   public void setId(java.lang.Long value) {
     this.id = value;
-  }
-
-  /**
-   * Gets the value of the 'name' field.
-   */
-  public java.lang.CharSequence getName() {
-    return name;
-  }
-
-  /**
-   * Sets the value of the 'name' field.
-   * @param value the value to set.
-   */
-  public void setName(java.lang.CharSequence value) {
-    this.name = value;
   }
 
   /**
@@ -117,7 +98,6 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
     implements org.apache.avro.data.RecordBuilder<AvroVertex> {
 
     private long id;
-    private java.lang.CharSequence name;
     private java.util.List<sparkgremlin.blueprints.avro.Property> props;
 
     /** Creates a new Builder */
@@ -132,13 +112,9 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
         this.id = data().deepCopy(fields()[0].schema(), other.id);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.name)) {
-        this.name = data().deepCopy(fields()[1].schema(), other.name);
+      if (isValidValue(fields()[1], other.props)) {
+        this.props = data().deepCopy(fields()[1].schema(), other.props);
         fieldSetFlags()[1] = true;
-      }
-      if (isValidValue(fields()[2], other.props)) {
-        this.props = data().deepCopy(fields()[2].schema(), other.props);
-        fieldSetFlags()[2] = true;
       }
     }
     
@@ -149,13 +125,9 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
         this.id = data().deepCopy(fields()[0].schema(), other.id);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.name)) {
-        this.name = data().deepCopy(fields()[1].schema(), other.name);
+      if (isValidValue(fields()[1], other.props)) {
+        this.props = data().deepCopy(fields()[1].schema(), other.props);
         fieldSetFlags()[1] = true;
-      }
-      if (isValidValue(fields()[2], other.props)) {
-        this.props = data().deepCopy(fields()[2].schema(), other.props);
-        fieldSetFlags()[2] = true;
       }
     }
 
@@ -183,31 +155,6 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
       return this;
     }
 
-    /** Gets the value of the 'name' field */
-    public java.lang.CharSequence getName() {
-      return name;
-    }
-    
-    /** Sets the value of the 'name' field */
-    public sparkgremlin.blueprints.avro.AvroVertex.Builder setName(java.lang.CharSequence value) {
-      validate(fields()[1], value);
-      this.name = value;
-      fieldSetFlags()[1] = true;
-      return this; 
-    }
-    
-    /** Checks whether the 'name' field has been set */
-    public boolean hasName() {
-      return fieldSetFlags()[1];
-    }
-    
-    /** Clears the value of the 'name' field */
-    public sparkgremlin.blueprints.avro.AvroVertex.Builder clearName() {
-      name = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
     /** Gets the value of the 'props' field */
     public java.util.List<sparkgremlin.blueprints.avro.Property> getProps() {
       return props;
@@ -215,21 +162,21 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
     
     /** Sets the value of the 'props' field */
     public sparkgremlin.blueprints.avro.AvroVertex.Builder setProps(java.util.List<sparkgremlin.blueprints.avro.Property> value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.props = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this; 
     }
     
     /** Checks whether the 'props' field has been set */
     public boolean hasProps() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
     
     /** Clears the value of the 'props' field */
     public sparkgremlin.blueprints.avro.AvroVertex.Builder clearProps() {
       props = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -238,8 +185,7 @@ public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase impl
       try {
         AvroVertex record = new AvroVertex();
         record.id = fieldSetFlags()[0] ? this.id : (java.lang.Long) defaultValue(fields()[0]);
-        record.name = fieldSetFlags()[1] ? this.name : (java.lang.CharSequence) defaultValue(fields()[1]);
-        record.props = fieldSetFlags()[2] ? this.props : (java.util.List<sparkgremlin.blueprints.avro.Property>) defaultValue(fields()[2]);
+        record.props = fieldSetFlags()[1] ? this.props : (java.util.List<sparkgremlin.blueprints.avro.Property>) defaultValue(fields()[1]);
         return record;
       } catch (Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);
