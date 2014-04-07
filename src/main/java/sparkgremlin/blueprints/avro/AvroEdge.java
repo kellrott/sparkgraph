@@ -7,10 +7,9 @@ package sparkgremlin.blueprints.avro;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroEdge\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"label\",\"type\":\"string\"},{\"name\":\"src\",\"type\":\"long\"},{\"name\":\"dest\",\"type\":\"long\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}}}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroEdge\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"src\",\"type\":\"long\"},{\"name\":\"dest\",\"type\":\"long\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   @Deprecated public long id;
-  @Deprecated public java.lang.CharSequence label;
   @Deprecated public long src;
   @Deprecated public long dest;
   @Deprecated public java.util.List<sparkgremlin.blueprints.avro.Property> props;
@@ -25,9 +24,8 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
   /**
    * All-args constructor.
    */
-  public AvroEdge(java.lang.Long id, java.lang.CharSequence label, java.lang.Long src, java.lang.Long dest, java.util.List<sparkgremlin.blueprints.avro.Property> props) {
+  public AvroEdge(java.lang.Long id, java.lang.Long src, java.lang.Long dest, java.util.List<sparkgremlin.blueprints.avro.Property> props) {
     this.id = id;
-    this.label = label;
     this.src = src;
     this.dest = dest;
     this.props = props;
@@ -38,10 +36,9 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return id;
-    case 1: return label;
-    case 2: return src;
-    case 3: return dest;
-    case 4: return props;
+    case 1: return src;
+    case 2: return dest;
+    case 3: return props;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -50,10 +47,9 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: id = (java.lang.Long)value$; break;
-    case 1: label = (java.lang.CharSequence)value$; break;
-    case 2: src = (java.lang.Long)value$; break;
-    case 3: dest = (java.lang.Long)value$; break;
-    case 4: props = (java.util.List<sparkgremlin.blueprints.avro.Property>)value$; break;
+    case 1: src = (java.lang.Long)value$; break;
+    case 2: dest = (java.lang.Long)value$; break;
+    case 3: props = (java.util.List<sparkgremlin.blueprints.avro.Property>)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -71,21 +67,6 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
    */
   public void setId(java.lang.Long value) {
     this.id = value;
-  }
-
-  /**
-   * Gets the value of the 'label' field.
-   */
-  public java.lang.CharSequence getLabel() {
-    return label;
-  }
-
-  /**
-   * Sets the value of the 'label' field.
-   * @param value the value to set.
-   */
-  public void setLabel(java.lang.CharSequence value) {
-    this.label = value;
   }
 
   /**
@@ -155,7 +136,6 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
     implements org.apache.avro.data.RecordBuilder<AvroEdge> {
 
     private long id;
-    private java.lang.CharSequence label;
     private long src;
     private long dest;
     private java.util.List<sparkgremlin.blueprints.avro.Property> props;
@@ -172,21 +152,17 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
         this.id = data().deepCopy(fields()[0].schema(), other.id);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.label)) {
-        this.label = data().deepCopy(fields()[1].schema(), other.label);
+      if (isValidValue(fields()[1], other.src)) {
+        this.src = data().deepCopy(fields()[1].schema(), other.src);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.src)) {
-        this.src = data().deepCopy(fields()[2].schema(), other.src);
+      if (isValidValue(fields()[2], other.dest)) {
+        this.dest = data().deepCopy(fields()[2].schema(), other.dest);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.dest)) {
-        this.dest = data().deepCopy(fields()[3].schema(), other.dest);
+      if (isValidValue(fields()[3], other.props)) {
+        this.props = data().deepCopy(fields()[3].schema(), other.props);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.props)) {
-        this.props = data().deepCopy(fields()[4].schema(), other.props);
-        fieldSetFlags()[4] = true;
       }
     }
     
@@ -197,21 +173,17 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
         this.id = data().deepCopy(fields()[0].schema(), other.id);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.label)) {
-        this.label = data().deepCopy(fields()[1].schema(), other.label);
+      if (isValidValue(fields()[1], other.src)) {
+        this.src = data().deepCopy(fields()[1].schema(), other.src);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.src)) {
-        this.src = data().deepCopy(fields()[2].schema(), other.src);
+      if (isValidValue(fields()[2], other.dest)) {
+        this.dest = data().deepCopy(fields()[2].schema(), other.dest);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.dest)) {
-        this.dest = data().deepCopy(fields()[3].schema(), other.dest);
+      if (isValidValue(fields()[3], other.props)) {
+        this.props = data().deepCopy(fields()[3].schema(), other.props);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.props)) {
-        this.props = data().deepCopy(fields()[4].schema(), other.props);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -239,31 +211,6 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
       return this;
     }
 
-    /** Gets the value of the 'label' field */
-    public java.lang.CharSequence getLabel() {
-      return label;
-    }
-    
-    /** Sets the value of the 'label' field */
-    public sparkgremlin.blueprints.avro.AvroEdge.Builder setLabel(java.lang.CharSequence value) {
-      validate(fields()[1], value);
-      this.label = value;
-      fieldSetFlags()[1] = true;
-      return this; 
-    }
-    
-    /** Checks whether the 'label' field has been set */
-    public boolean hasLabel() {
-      return fieldSetFlags()[1];
-    }
-    
-    /** Clears the value of the 'label' field */
-    public sparkgremlin.blueprints.avro.AvroEdge.Builder clearLabel() {
-      label = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
     /** Gets the value of the 'src' field */
     public java.lang.Long getSrc() {
       return src;
@@ -271,20 +218,20 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
     
     /** Sets the value of the 'src' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder setSrc(long value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.src = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this; 
     }
     
     /** Checks whether the 'src' field has been set */
     public boolean hasSrc() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
     
     /** Clears the value of the 'src' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder clearSrc() {
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -295,20 +242,20 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
     
     /** Sets the value of the 'dest' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder setDest(long value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.dest = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this; 
     }
     
     /** Checks whether the 'dest' field has been set */
     public boolean hasDest() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
     
     /** Clears the value of the 'dest' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder clearDest() {
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -319,21 +266,21 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
     
     /** Sets the value of the 'props' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder setProps(java.util.List<sparkgremlin.blueprints.avro.Property> value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.props = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this; 
     }
     
     /** Checks whether the 'props' field has been set */
     public boolean hasProps() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
     
     /** Clears the value of the 'props' field */
     public sparkgremlin.blueprints.avro.AvroEdge.Builder clearProps() {
       props = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -342,10 +289,9 @@ public class AvroEdge extends org.apache.avro.specific.SpecificRecordBase implem
       try {
         AvroEdge record = new AvroEdge();
         record.id = fieldSetFlags()[0] ? this.id : (java.lang.Long) defaultValue(fields()[0]);
-        record.label = fieldSetFlags()[1] ? this.label : (java.lang.CharSequence) defaultValue(fields()[1]);
-        record.src = fieldSetFlags()[2] ? this.src : (java.lang.Long) defaultValue(fields()[2]);
-        record.dest = fieldSetFlags()[3] ? this.dest : (java.lang.Long) defaultValue(fields()[3]);
-        record.props = fieldSetFlags()[4] ? this.props : (java.util.List<sparkgremlin.blueprints.avro.Property>) defaultValue(fields()[4]);
+        record.src = fieldSetFlags()[1] ? this.src : (java.lang.Long) defaultValue(fields()[1]);
+        record.dest = fieldSetFlags()[2] ? this.dest : (java.lang.Long) defaultValue(fields()[2]);
+        record.props = fieldSetFlags()[3] ? this.props : (java.util.List<sparkgremlin.blueprints.avro.Property>) defaultValue(fields()[3]);
         return record;
       } catch (Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);

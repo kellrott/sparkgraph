@@ -18,9 +18,6 @@
       "name" : "id",
       "type" : "long"
     }, {
-      "name" : "label",
-      "type" : "string"
-    }, {
       "name" : "src",
       "type" : "long"
     }, {

@@ -7,8 +7,8 @@ version := "0.1"
 scalaVersion := "2.10.0"
 
 libraryDependencies ++= Seq(
-	"org.apache.spark" %% "spark-core" % "0.9.0-incubating",
-	"org.apache.spark" %% "spark-graphx" % "0.9.0-incubating",
+	"org.apache.spark" %% "spark-core" % "1.0.0-SNAPSHOT",
+	"org.apache.spark" %% "spark-graphx" % "1.0.0-SNAPSHOT",
 	"com.tinkerpop.blueprints" % "blueprints-core" % "2.4.0",
 	"com.tinkerpop.blueprints" % "blueprints-test" % "2.4.0" % "test",
 	"com.tinkerpop" % "pipes" % "2.4.0",

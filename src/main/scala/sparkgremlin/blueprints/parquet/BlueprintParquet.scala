@@ -47,7 +47,9 @@ object BlueprintParquet {
 
 
   def avroEdge2Spark(inE:AvroEdge) : SparkEdge = {
-    val out = new SparkEdge(inE.getId, inE.getSrc, inE.getDest, inE.getLabel.toString, null)
+    val label_prop = inE.getProps.asScala.filter( _.getKey == "label")
+    val label_name = if (label_prop.length == 0) { label_prop(0).getValue } else { null }
+    val out = new SparkEdge(inE.getId, inE.getSrc, inE.getDest, label_name.toString, null)
     inE.getProps.asScala.foreach( x => out.setProperty(x.getKey.toString, x.getValue) )
     return out
   }
