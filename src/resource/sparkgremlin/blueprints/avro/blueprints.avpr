@@ -9,7 +9,7 @@
       "type" : "string"
     }, {
       "name" : "value",
-      "type" : [ "long", "string" ]
+      "type" : [ "int", "boolean", "long", "string", "float", "double" ]
     } ]
   }, {
     "type" : "record",
@@ -23,6 +23,9 @@
     }, {
       "name" : "dest",
       "type" : "long"
+    }, {
+      "name" : "label",
+      "type" : "string"
     }, {
       "name" : "props",
       "type" : {

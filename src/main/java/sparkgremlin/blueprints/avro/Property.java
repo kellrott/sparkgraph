@@ -7,7 +7,7 @@ package sparkgremlin.blueprints.avro;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public class Property extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Property\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Property\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"int\",\"boolean\",\"long\",\"string\",\"float\",\"double\"]}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   @Deprecated public java.lang.CharSequence key;
   @Deprecated public java.lang.Object value;

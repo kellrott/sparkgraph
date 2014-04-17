@@ -122,4 +122,9 @@ class SparkEdge(
     return propMap.remove(key).orNull.asInstanceOf[T];
   }
 
+
+  override def toString() : String = {
+    return "%s %s (%s,%s) [%s]".format( id,label, outVertexId, inVertexId, propMap.map( x => "%s:%s".format(x._1, x._2) ).mkString(",") )
+  }
+
 }

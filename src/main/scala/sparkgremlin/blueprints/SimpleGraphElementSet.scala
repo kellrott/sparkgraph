@@ -13,37 +13,11 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
   def flushUpdates() : Boolean = inGraph.flushUpdates();
   def elementRDD(): RDD[E] = rdd;
 
-  var rddCollect : Array[E] = null;
-  var rddCollectIndex = 0;
-
-  def hasNext: Boolean = {
-    if (rddCollect == null) {
-      rddCollect = rdd.collect();
-      rddCollectIndex = 0;
-    }
-    return rddCollectIndex < rddCollect.length;
-  }
-
   def graphX() : GraphXGraph[SparkVertex, SparkEdge] = inGraph.graphX()
-
-  def next(): E = {
-    if (!hasNext) {
-      return null.asInstanceOf[E];
-    }
-    if (rddCollect != null) {
-      val out = rddCollect(rddCollectIndex).asInstanceOf[SparkGraphElement];
-      out.setGraph(inGraph)
-      rddCollectIndex += 1
-      out.asInstanceOf[E];
-    } else {
-      null.asInstanceOf[E]
-    }
-  }
 
   def remove() = {};
 
-  def iterator(): java.util.Iterator[E] = {
-    rddCollect = null;
-    this
-  };
+  override def process(in: E): E = in
+
+  override def getRDD(): RDD[E] = rdd
 }

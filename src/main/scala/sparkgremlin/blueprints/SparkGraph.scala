@@ -13,14 +13,13 @@ import collection.JavaConverters._
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd._
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{graphx, SparkContext}
 import scala.util.Random
 import org.apache.spark.storage.StorageLevel
 import sparkgremlin.blueprints.io._
 import sparkgremlin.blueprints.io.build._
 
 import org.apache.spark.graphx.impl.{GraphImpl => GraphXImplGraph, EdgePartitionBuilder}
-import org.apache.spark.graphx
 import scala.reflect.ClassTag
 import com.tinkerpop.blueprints.Edge
 
@@ -106,7 +105,7 @@ object SparkGraph {
 
 }
 
-class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends Graph with SparkGraphElementSet[SparkGraphElement] {
+class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends SparkGraphElementSet[SparkGraphElement] with Graph {
 
   def this(graph : graphx.Graph[SparkVertex,SparkEdge]) = {
     this(graph, StorageLevel.MEMORY_ONLY)
@@ -232,7 +231,32 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[Vertex](this, graph.vertices.map( _._2 ), classOf[SparkVertex] );
+
+    val flatRDD = graph.mapReduceTriplets[(SparkVertex,Array[SparkEdge])](
+      x => {
+        Iterator( (x.srcId, (x.srcAttr, Array(x.attr)  ) ), (x.dstId, (x.dstAttr, Array(x.attr))) )
+      },
+      (y,z) => {
+        (y._1, y._2 ++ z._2)
+      }
+    )
+
+    return new RDDKeySet[(SparkVertex,Array[SparkEdge]), Vertex] {
+      def remove() = {}
+
+      override def process(in: (SparkVertex, Array[SparkEdge])): Vertex = {
+        in._1.edgeSet = in._2.to[ArrayBuffer]
+        in._1.graph = SparkGraph.this
+        in._1
+      }
+
+      override def elementClass(): Class[_] = classOf[Vertex]
+      override def elementRDD(): RDD[Vertex] = null
+      override def getRDD(): RDD[(SparkVertex, Array[SparkEdge])] = flatRDD.values
+    }
+
+
+    //return SimpleGraphElementSet[Vertex](this, graph.vertices.map( _._2 ), classOf[SparkVertex] );
   }
 
   def getVertices(key: String, value: scala.Any): java.lang.Iterable[Vertex] = {
@@ -277,30 +301,11 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   def elementClass() : Class[_] = classOf[SparkVertex];
 
-  def iterator(): java.util.Iterator[SparkGraphElement] = this;
-
   var graphCollect : Array[SparkGraphElement] = null;
   var graphCollectIndex = 0;
 
-  def hasNext: Boolean = {
-    if (graphCollect == null) {
-      graphCollect = elementRDD().collect();
-      graphCollectIndex = 0;
-    }
-    return graphCollectIndex < graphCollect.length;
-  }
-
-  def next(): SparkGraphElement = {
-    if (graphCollect != null) {
-      val out = graphCollect(graphCollectIndex);
-      graphCollectIndex += 1
-      out;
-    } else {
-      null
-    }
-  }
-
   def remove() = {};
+
   def graphX(): graphx.Graph[SparkVertex,SparkEdge] = {
     flushUpdates()
     graph
@@ -334,5 +339,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     flatRDD.map( _._2 )
   }
 
+  override def process(in: SparkGraphElement): SparkGraphElement = in
 
+  override def getRDD(): RDD[SparkGraphElement] = graph.vertices.values.map( _.asInstanceOf[SparkGraphElement])
 }

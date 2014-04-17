@@ -6,13 +6,14 @@ protocol Blueprints {
 
 record Property {
 	string key;
-	union { long, string } value;
+	union { int, boolean, long, string, float, double } value;
 }
 
 record AvroEdge {
     long id;
 	long src;
 	long dest;
+	string label;
 	array<Property> props;
 }
 

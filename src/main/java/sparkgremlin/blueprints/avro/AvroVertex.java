@@ -7,7 +7,7 @@ package sparkgremlin.blueprints.avro;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public class AvroVertex extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroVertex\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"long\",\"string\"]}]}}}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroVertex\",\"namespace\":\"sparkgremlin.blueprints.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"props\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"Property\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"int\",\"boolean\",\"long\",\"string\",\"float\",\"double\"]}]}}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   @Deprecated public long id;
   @Deprecated public java.util.List<sparkgremlin.blueprints.avro.Property> props;

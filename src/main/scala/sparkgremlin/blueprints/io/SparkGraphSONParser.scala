@@ -9,7 +9,7 @@ import java.io.StringWriter
 import com.fasterxml.jackson.core.{JsonGenerator, JsonFactory}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tinkerpop.blueprints.Direction
-import sparkgremlin.blueprints.SparkVertex
+import sparkgremlin.blueprints.{SparkEdge, SparkVertex}
 
 
 class SparkGraphSONParser {
@@ -28,16 +28,24 @@ class SparkGraphSONParser {
         val edgeArray = v.asInstanceOf[java.util.ArrayList[AnyRef]];
         for ( edgeElement <- edgeArray.asScala ) {
           val edgeData = edgeElement.asInstanceOf[java.util.Map[String,AnyRef]]
-          val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV").toString.toLong, null))
+          val outEdge = new SparkEdge(
+            edgeData.get("_id").toString.toLong,
+            id, edgeData.get("_inV").toString.toLong,
+            edgeData.get("_label").asInstanceOf[String], null )
+          //val outEdge = out.addEdge(edgeData.get("_label").asInstanceOf[String], new SparkVertex(edgeData.get("_inV").toString.toLong, null))
           for ( (ek,ev) <- edgeData.asScala ) {
             if (ek == "_id") {
             } else if (ek == "_label") {
+            } else if (ek == "_inV") {
+            } else if (ek == "_outV") {
             } else {
               outEdge.setProperty(ek,ev)
             }
           }
+          out.edgeSet += outEdge
         }
       } else if ( k == "_id") {
+      } else if ( k == "_inE") {
       } else {
         out.setProperty(k,v);
       }
@@ -55,6 +63,7 @@ class SparkGraphSONParser {
       e.put("_id", x.getId)
       e.put("_label", x.getLabel)
       e.put("_inV",  x.getVertex(Direction.IN).getId)
+      x.getPropertyKeys.asScala.foreach( key => e.put(key,x.getProperty(key)))
       outE.add(e)
     } )
 

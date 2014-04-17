@@ -19,6 +19,7 @@ import sparkgremlin.blueprints.avro.{AvroEdge, AvroVertex, Property}
 import org.apache.hadoop.fs.Path
 
 import collection.JavaConverters._
+import org.apache.spark.storage.StorageLevel
 
 
 object BlueprintParquet {
@@ -32,7 +33,7 @@ object BlueprintParquet {
 
   def avroVertex2Spark(inV:AvroVertex) : SparkVertex = {
     val out = new SparkVertex(inV.getId, null)
-
+    inV.getProps.asScala.foreach( x => out.setProperty(x.getKey.toString, x.getValue) )
     return out
   }
 
@@ -41,14 +42,14 @@ object BlueprintParquet {
     out.setId(inE.getId.asInstanceOf[Long])
     out.setSrc( inE.outVertexId )
     out.setDest( inE.inVertexId )
-    out.setProps( inE.propMap.toList.map( x => new Property(x._1, x._2) ).asJava )
+    val props = inE.propMap.toList.map( x => new Property(x._1, x._2) ).asJava
+    out.setLabel(inE.getLabel)
+    out.setProps( props )
     return out
   }
 
-
   def avroEdge2Spark(inE:AvroEdge) : SparkEdge = {
-    val label_prop = inE.getProps.asScala.filter( _.getKey == "label")
-    val label_name = if (label_prop.length == 0) { label_prop(0).getValue } else { null }
+    val label_name = inE.getLabel
     val out = new SparkEdge(inE.getId, inE.getSrc, inE.getDest, label_name.toString, null)
     inE.getProps.asScala.foreach( x => out.setProperty(x.getKey.toString, x.getValue) )
     return out
@@ -78,7 +79,7 @@ object BlueprintParquet {
       classOf[ParquetOutputFormat[AvroEdge]], job.getConfiguration)
   }
 
-  def load(path:String, sc:SparkContext) : SparkGraph = {
+  def load(path:String, sc:SparkContext, defaultStorage: StorageLevel = StorageLevel.MEMORY_ONLY) : SparkGraph = {
     val dpath = new Path(path)
     val fs = dpath.getFileSystem(sc.hadoopConfiguration)
     if (!fs.exists(dpath)) {
@@ -96,7 +97,7 @@ object BlueprintParquet {
 
     val graph = graphx.Graph[SparkVertex,SparkEdge]( verticies.map( x => (x._2.getId, avroVertex2Spark(x._2)) ), edges.map( x => new graphx.Edge(x._2.getSrc, x._2.getDest, avroEdge2Spark(x._2) ) ))
 
-    return new SparkGraph(graph)
+    return new SparkGraph(graph, defaultStorage)
   }
 
 

@@ -14,7 +14,7 @@ import scala.util.Random
  * @param inGraph
  */
 class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends SparkGraphElementBase(id, inGraph) with Vertex with Serializable {
-  val edgeSet = new ArrayBuffer[SparkEdge]();
+  @transient var edgeSet = new ArrayBuffer[SparkEdge]();
 
   override def setProperty(key:String, value:AnyRef) = {
     if (key == null || key.length == 0 || key == "id") {
@@ -86,7 +86,6 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     if (graph != null) {
       graph.flushUpdates();
     }
-
     val out = new ArrayBuffer[SparkEdge]();
     if (direction == Direction.OUT || direction == Direction.BOTH) {
       if (graph != null) {
@@ -104,15 +103,24 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
       }
     }
     if (direction == Direction.IN || direction == Direction.BOTH) {
-      if (graph == null) {
-        throw new UnsupportedOperationException(SparkGraph.READ_ONLY_MESSAGE);
+      if (graph != null) {
+        var incoming = graph.graph.edges.filter( x => x.dstId == id ).map( _.attr )
+        if (labels.length > 0) {
+          incoming = incoming.filter( x=>labels.contains(x.label) );
+        }
+        out ++= incoming.collect();
+      } else {
+        if (labels.length > 0) {
+          out ++= edgeSet.filter( x => labels.contains(x.label) && x.inVertexId == id )
+        } else {
+          out ++= edgeSet.filter( x => x.inVertexId == id )
+        }
       }
-      var incoming = graph.graph.edges.filter( x => x.dstId == id ).map( _.attr )
-      if (labels.length > 0) {
-        incoming = incoming.filter( x=>labels.contains(x.label) );
-      }
-      out ++= incoming.collect();
     }
     return out.map( x => { x.graph = graph; x.asInstanceOf[Edge]; } ).toIterable.asJava;
+  }
+
+  override def toString() : String = {
+    return "%s [%s] [%s]".format( id, propMap.map( x => "%s:%s".format(x._1, x._2) ).mkString(","), edgeSet.map(_.getId).mkString(",")  )
   }
 }
