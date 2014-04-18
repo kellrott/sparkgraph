@@ -241,18 +241,20 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
       }
     )
 
-    return new RDDKeySet[(SparkVertex,Array[SparkEdge]), Vertex] {
+    return new SparkGraphElementSet[Vertex] {
       def remove() = {}
 
-      override def process(in: (SparkVertex, Array[SparkEdge])): Vertex = {
-        in._1.edgeSet = in._2.to[ArrayBuffer]
-        in._1.graph = SparkGraph.this
-        in._1
+      override def process(in: Any): Vertex = {
+        val tin = in.asInstanceOf[(SparkVertex, Array[SparkEdge])]
+        tin._1.edgeSet = tin._2.to[ArrayBuffer]
+        tin._1.graph = SparkGraph.this
+        tin._1
       }
 
       override def elementClass(): Class[_] = classOf[Vertex]
-      override def elementRDD(): RDD[Vertex] = null
+      override def elementRDD(): RDD[Vertex] = graph.vertices.values.map(_.asInstanceOf[Vertex])
       override def getRDD(): RDD[(SparkVertex, Array[SparkEdge])] = flatRDD.values
+      override def graphX(): graphx.Graph[SparkVertex, SparkEdge] = graphX()
     }
 
 
@@ -339,7 +341,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     flatRDD.map( _._2 )
   }
 
-  override def process(in: SparkGraphElement): SparkGraphElement = in
+  override def process(in: Any): SparkGraphElement = in.asInstanceOf[SparkGraphElement]
 
   override def getRDD(): RDD[SparkGraphElement] = graph.vertices.values.map( _.asInstanceOf[SparkGraphElement])
 }

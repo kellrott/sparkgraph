@@ -17,7 +17,7 @@ class SimpleGraphElementSet[E <: Element](var inGraph:SparkGraph, var rdd:RDD[E]
 
   def remove() = {};
 
-  override def process(in: E): E = in
+  override def process(in: Any): E = in.asInstanceOf[E]
 
   override def getRDD(): RDD[E] = rdd
 }
