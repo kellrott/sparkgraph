@@ -251,10 +251,10 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
         tin._1
       }
 
-      override def elementClass(): Class[_] = classOf[Vertex]
-      override def elementRDD(): RDD[Vertex] = graph.vertices.values.map(_.asInstanceOf[Vertex])
+      override def elementClass(): Class[_] = classOf[SparkVertex]
+      override def elementRDD(): RDD[Vertex] = graph.vertices.mapValues( _.asInstanceOf[Vertex] ).values
       override def getRDD(): RDD[(SparkVertex, Array[SparkEdge])] = flatRDD.values
-      override def graphX(): graphx.Graph[SparkVertex, SparkEdge] = graphX()
+      override def graphX(): graphx.Graph[SparkVertex, SparkEdge] = graph
     }
 
 

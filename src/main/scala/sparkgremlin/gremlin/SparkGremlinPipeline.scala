@@ -37,6 +37,8 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     } else if (sparkElementSet.elementClass() == classOf[SparkEdge]) {
       pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
       pipes.add(new SparkGraphQueryPipe[SparkEdge](BulkDataType.EDGE_DATA));
+    } else {
+      throw new RuntimeException("Unable to init pipeline")
     }
   /*
   } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {

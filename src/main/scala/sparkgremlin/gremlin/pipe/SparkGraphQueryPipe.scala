@@ -18,7 +18,7 @@ class SparkGraphQueryPipe[E <: SparkGraphElement](cls : BulkDataType.Value) exte
   def bulkProcess() : BulkPipeData[E] = {
     val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[E]];
     if (cls == BulkDataType.VERTEX_DATA) {
-      val active_ids = bs.graphData.elementRDD().map( x => (x.asInstanceOf[SparkVertex].id, true) );
+      val active_ids = bs.graphData.elementRDD().map( x => (x.asInstanceOf[SparkVertex].id, true) )
       val new_verts = bs.graphData.graphX().vertices.cogroup( active_ids ).map( x => {
         if (x._2._2.length > 0) {
           (x._1, (x._2._1.head, new GremlinVertex(1)) )
