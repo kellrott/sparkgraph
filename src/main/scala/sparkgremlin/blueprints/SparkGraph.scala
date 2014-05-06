@@ -78,15 +78,15 @@ object SparkGraph {
     return out
   }
 
-  def mergeVertex(vertexId:Long, vset1:Seq[SparkVertex], vset2:Seq[SparkVertex]) : SparkVertex = {
+  def mergeVertex(vertexId:Long, vset1:java.lang.Iterable[SparkVertex], vset2:java.lang.Iterable[SparkVertex]) : SparkVertex = {
     var out : SparkVertex = new SparkVertex(vertexId, null);
-    for (a <- vset1) {
+    for (a <- vset1.asScala) {
       out.edgeSet ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k));
       }
     }
-    for (a <- vset2) {
+    for (a <- vset2.asScala) {
       out.edgeSet ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k));
@@ -98,7 +98,7 @@ object SparkGraph {
   def cachedVertices2Graph(vertices: RDD[SparkVertex]) : graphx.Graph[SparkVertex,SparkEdge] = {
     val edges = vertices.flatMap( x => x.edgeSet ).map( x => graphx.Edge( x.outVertexId, x.inVertexId, x ) )
     val fringeVerts = vertices.flatMap( x => x.edgeSet.map( y => {val z = y.getVertex(Direction.IN); (z.getId.asInstanceOf[Long], z.asInstanceOf[SparkVertex])  } ) )
-    val rdd = vertices.map( x => (x.getId.asInstanceOf[Long], x) ).cogroup(fringeVerts).map( x => (x._1, mergeVertex(x._1, x._2._1, x._2._2 ) ) )
+    val rdd = vertices.map( x => (x.getId.asInstanceOf[Long], x) ).cogroup(fringeVerts).map( x => (x._1, mergeVertex(x._1, x._2._1.asJava, x._2._2.asJava ) ) )
     val gr = graphx.Graph(rdd, edges)
     return gr
   }
@@ -127,11 +127,11 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     }
     val u = graph.vertices.sparkContext.parallelize(updates)
 
-    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
-    val newEdges =  u.filter(  _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => (x._1, SparkGraphBuilder.edgeBuild(x._1, x._2)));
+    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2.toSeq)) );
+    val newEdges =  u.filter(  _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => (x._1, SparkGraphBuilder.edgeBuild(x._1, x._2.toSeq)));
 
-    val nextVerts = graph.vertices.cogroup( newVertex ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1, x._2._2 ) ) ).filter(x => x._2 != null)
-    val nextEdges = graph.edges.map( x => (x.attr.id, x.attr) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1, x._2._2) ).filter( _ != null ).map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )
+    val nextVerts = graph.vertices.cogroup( newVertex ).map( x => (x._1, SparkGraphBuilder.mergeVertex( x._2._1.toSeq, x._2._2.toSeq ) ) ).filter(x => x._2 != null)
+    val nextEdges = graph.edges.map( x => (x.attr.id, x.attr) ).cogroup(newEdges).map( x => SparkGraphBuilder.mergeEdge(x._2._1.toSeq, x._2._2.toSeq) ).filter( _ != null ).map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )
 
     graph = graphx.Graph(nextVerts, nextEdges)
 

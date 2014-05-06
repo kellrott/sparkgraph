@@ -151,8 +151,8 @@ object SparkGraphBuilder {
 
   def buildGraph(sc:SparkContext, input:Iterator[BuildElement]) : SparkGraph = {
     val u = sc.parallelize(input.toSeq)
-    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2)) );
-    val newEdges =  u.filter( ! _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => SparkGraphBuilder.edgeBuild(x._1, x._2));
+    val newVertex = u.filter( ! _.isEdge ).map( x => (x.getVertexId.asInstanceOf[Long], x) ).groupByKey().map( x => (x._1, SparkGraphBuilder.vertexBuild(x._1, x._2.toSeq)) );
+    val newEdges =  u.filter( ! _.isEdge ).map( x => (x.getEdgeId.asInstanceOf[Long], x)).groupByKey().map( x => SparkGraphBuilder.edgeBuild(x._1, x._2.toSeq));
     return new SparkGraph(newVertex, newEdges);
   }
 }
