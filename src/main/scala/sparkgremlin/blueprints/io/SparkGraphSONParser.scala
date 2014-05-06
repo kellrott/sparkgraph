@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.{JsonGenerator, JsonFactory}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tinkerpop.blueprints.Direction
 import sparkgremlin.blueprints.{SparkEdge, SparkVertex}
+import scala.collection.mutable.ArrayBuffer
 
 
 class SparkGraphSONParser {
@@ -23,6 +24,7 @@ class SparkGraphSONParser {
     val data = JSON_MAPPER.readValue(text, classOf[java.util.Map[String,AnyRef]])
     val id = data.get("_id").toString.toLong;
     val out = new SparkVertex(id.asInstanceOf[Long], null);
+    val edges = new ArrayBuffer[SparkEdge]()
     for ( (k,v) <- data.asScala ) {
       if (k == "_outE") {
         val edgeArray = v.asInstanceOf[java.util.ArrayList[AnyRef]];
@@ -42,7 +44,7 @@ class SparkGraphSONParser {
               outEdge.setProperty(ek,ev)
             }
           }
-          out.edgeSet += outEdge
+          edges += outEdge
         }
       } else if ( k == "_id") {
       } else if ( k == "_inE") {
@@ -50,6 +52,7 @@ class SparkGraphSONParser {
         out.setProperty(k,v);
       }
     }
+    out.edgeSet = edges.toArray
     return out;
   }
 

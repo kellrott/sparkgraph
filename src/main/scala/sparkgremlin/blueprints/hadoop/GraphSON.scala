@@ -15,7 +15,7 @@ object GraphSON {
     val flatRDD = sg.graphX().mapReduceTriplets[(SparkVertex)](  x => {
       val o = new SparkVertex(x.srcAttr.id, null)
       x.srcAttr.propMap.foreach( x => o.propMap(x._1) = x._2 )
-      o.edgeSet += x.attr
+      o.edgeSet = Array(x.attr)
       Iterator((x.srcId, o),(x.dstId,x.dstAttr))
     },
       (y,z) => {

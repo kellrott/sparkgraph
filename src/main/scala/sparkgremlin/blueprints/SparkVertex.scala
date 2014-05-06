@@ -14,7 +14,7 @@ import scala.util.Random
  * @param inGraph
  */
 class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends SparkGraphElementBase(id, inGraph) with Vertex with Serializable {
-  @transient var edgeSet = new ArrayBuffer[SparkEdge]();
+  var edgeSet : Array[SparkEdge] = null;
 
   override def setProperty(key:String, value:AnyRef) = {
     if (key == null || key.length == 0 || key == "id") {
@@ -33,6 +33,17 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
 
   override def hashCode() = id.hashCode
 
+
+  def fetchEdges() = {
+    if (edgeSet == null) {
+      if (graph != null) {
+        edgeSet = graph.graph.edges.filter( x => x.dstId == id || x.srcId == id ).map( _.attr ) .collect()
+      } else {
+        throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
+      }
+    }
+  }
+
   def remove() = {
     if (graph == null) {
       throw new UnsupportedOperationException(SparkGraph.NOT_READY_MESSAGE);
@@ -47,9 +58,9 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     val edgeId = new java.lang.Long(Random.nextLong());
     if (graph != null) {
       graph.updates += new EdgeBuild(edgeId, id, inVertex.getId.asInstanceOf[Long], label);
+      edgeSet = null
     }
     val e = new SparkEdge(edgeId, id, inVertex.getId.asInstanceOf[Long], label, graph, this, inVertex);
-    edgeSet += e;
     return e;
   }
 
@@ -86,6 +97,7 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
     if (graph != null) {
       graph.flushUpdates();
     }
+    fetchEdges()
     val out = new ArrayBuffer[SparkEdge]();
     if (direction == Direction.OUT || direction == Direction.BOTH) {
       if (graph != null) {
@@ -121,6 +133,10 @@ class SparkVertex(override val id:Long, @transient inGraph:SparkGraph) extends S
   }
 
   override def toString() : String = {
-    return "%s [%s] [%s]".format( id, propMap.map( x => "%s:%s".format(x._1, x._2) ).mkString(","), edgeSet.map(_.getId).mkString(",")  )
+    if (edgeSet != null) {
+      return "%s [%s] [%s]".format( id, propMap.map( x => "%s:%s".format(x._1, x._2) ).mkString(","), edgeSet.map(_.getId).mkString(",")  )
+    } else {
+      return "%s [%s] [na]".format( id, propMap.map( x => "%s:%s".format(x._1, x._2) ).mkString(",") )
+    }
   }
 }

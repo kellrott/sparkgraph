@@ -231,7 +231,8 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
-
+    return new SimpleGraphElementSet[Vertex](this, graph.vertices.map(_._2), classOf[SparkVertex] )
+    /*
     val flatRDD = graph.mapReduceTriplets[(SparkVertex,Array[SparkEdge])](
       x => {
         Iterator( (x.srcId, (x.srcAttr, Array(x.attr)  ) ), (x.dstId, (x.dstAttr, Array(x.attr))) )
@@ -240,6 +241,8 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
         (y._1, y._2 ++ z._2)
       }
     )
+    flatRDD
+    assert(graph.vertices.count() == flatRDD.count())
 
     return new SparkGraphElementSet[Vertex] {
       def remove() = {}
@@ -256,14 +259,12 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
       override def getRDD(): RDD[(SparkVertex, Array[SparkEdge])] = flatRDD.values
       override def graphX(): graphx.Graph[SparkVertex, SparkEdge] = graph
     }
-
-
-    //return SimpleGraphElementSet[Vertex](this, graph.vertices.map( _._2 ), classOf[SparkVertex] );
+    */
   }
 
   def getVertices(key: String, value: scala.Any): java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[Vertex](this, graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2), classOf[SparkVertex] )
+    return new SimpleGraphElementSet[SparkVertex](this, graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2), classOf[SparkVertex] ).asInstanceOf[java.lang.Iterable[Vertex]]
   }
 
   def addEdge(id: Any, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
@@ -293,7 +294,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
     val out = graph.edges.filter( _.attr.labelMatch(key, value.toString) );
-    return new SimpleGraphElementSet[Edge](this, out.map(_.attr), classOf[SparkEdge]);
+    return new SimpleGraphElementSet[SparkEdge](this, out.map(_.attr), classOf[SparkEdge]).asInstanceOf[java.lang.Iterable[Edge]];
   }
 
   def query(): GraphQuery = {
@@ -318,6 +319,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     return graph.vertices.map( _._2 )
   }
 
+  /*
   def getCachedVertices(dir : Direction) : RDD[SparkVertex] = {
     val flatRDD = graph.mapReduceTriplets[SparkVertex](  x => {
       val o_src = new SparkVertex(x.srcAttr.id, null)
@@ -340,6 +342,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     })
     flatRDD.map( _._2 )
   }
+  */
 
   override def process(in: Any): SparkGraphElement = in.asInstanceOf[SparkGraphElement]
 
