@@ -13,10 +13,15 @@ import sparkgremlin.blueprints.{SparkEdge, SparkVertex, SparkGraph}
 object GraphSON {
   def save(path : String, sg : SparkGraph) = {
     val flatRDD = sg.graphX().mapReduceTriplets[(SparkVertex)](  x => {
-      val o = new SparkVertex(x.srcAttr.id, null)
-      x.srcAttr.propMap.foreach( x => o.propMap(x._1) = x._2 )
-      o.edgeSet = Array(x.attr)
-      Iterator((x.srcId, o),(x.dstId,x.dstAttr))
+      val src = new SparkVertex(x.srcAttr.id, null)
+      x.srcAttr.propMap.foreach( x => src.propMap(x._1) = x._2 )
+      src.edgeSet = Array(x.attr)
+
+      val dst = new SparkVertex(x.dstAttr.id, null)
+      x.dstAttr.propMap.foreach( x => dst.propMap(x._1) = x._2 )
+      dst.edgeSet = Array(x.attr)
+
+      Iterator((x.srcId, src),(x.dstId,dst))
     },
       (y,z) => {
          y.edgeSet ++= z.edgeSet;
