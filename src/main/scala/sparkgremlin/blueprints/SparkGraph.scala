@@ -67,31 +67,32 @@ object SparkGraph {
 
   def reduceVertex(v1:SparkVertex, v2:SparkVertex) : SparkVertex = {
     var out : SparkVertex = new SparkVertex(v1.getID, null)
-    out.edgeSet ++= v1.edgeSet
-    out.edgeSet ++= v2.edgeSet
+    out.edgeSet = v1.edgeSet ++ v2.edgeSet
     for ( k <- v1.getPropertyKeys.asScala) {
-      out.setProperty(k, v1.getProperty(k));
+      out.setProperty(k, v1.getProperty(k))
     }
     for ( k <- v2.getPropertyKeys.asScala) {
-      out.setProperty(k, v2.getProperty(k));
+      out.setProperty(k, v2.getProperty(k))
     }
     return out
   }
 
   def mergeVertex(vertexId:Long, vset1:java.lang.Iterable[SparkVertex], vset2:java.lang.Iterable[SparkVertex]) : SparkVertex = {
-    var out : SparkVertex = new SparkVertex(vertexId, null);
+    var out : SparkVertex = new SparkVertex(vertexId, null)
+    var edges = new ArrayBuffer[SparkEdge]()
     for (a <- vset1.asScala) {
-      out.edgeSet ++= a.edgeSet
+      edges ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
-        out.setProperty(k, a.getProperty(k));
+        out.setProperty(k, a.getProperty(k))
       }
     }
     for (a <- vset2.asScala) {
-      out.edgeSet ++= a.edgeSet
+      edges ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
-        out.setProperty(k, a.getProperty(k));
+        out.setProperty(k, a.getProperty(k))
       }
     }
+    out.edgeSet = edges.toArray
     return out;
   }
 
