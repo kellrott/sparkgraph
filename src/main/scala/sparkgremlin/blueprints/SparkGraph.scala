@@ -81,13 +81,13 @@ object SparkGraph {
     var out : SparkVertex = new SparkVertex(vertexId, null)
     var edges = new ArrayBuffer[SparkEdge]()
     for (a <- vset1.asScala) {
-      edges ++= a.edgeSet
+      if (a.edgeSet != null) edges ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k))
       }
     }
     for (a <- vset2.asScala) {
-      edges ++= a.edgeSet
+      if (a.edgeSet != null) edges ++= a.edgeSet
       for ( k <- a.getPropertyKeys.asScala) {
         out.setProperty(k, a.getProperty(k))
       }
