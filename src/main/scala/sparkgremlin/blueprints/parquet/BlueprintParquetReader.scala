@@ -37,11 +37,15 @@ abstract class BlueprintParquetReader[I, O <: SparkGraphElement](var conf:Config
 
   def queue_next_record() = {
     if (next_record == null) {
+      if (cur_record_reader == null) {
+        cur_record_reader = getRecordReader(curIndex)
+        curIndex += 1
+      }
       if (cur_record_reader.nextKeyValue()) {
         val i = cur_record_reader.getCurrentValue
         next_record = process(i)
       } else {
-        curIndex+=1
+        curIndex += 1
         if (curIndex < splits.length) {
           cur_record_reader = getRecordReader(curIndex)
           cur_record_reader.nextKeyValue()
