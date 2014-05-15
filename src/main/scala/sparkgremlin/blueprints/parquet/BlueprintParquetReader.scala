@@ -45,9 +45,9 @@ abstract class BlueprintParquetReader[I, O <: SparkGraphElement](var conf:Config
         val i = cur_record_reader.getCurrentValue
         next_record = process(i)
       } else {
-        curIndex += 1
         if (curIndex < splits.length) {
           cur_record_reader = getRecordReader(curIndex)
+          curIndex += 1
           cur_record_reader.nextKeyValue()
           val i = cur_record_reader.getCurrentValue
           next_record = process(i)
