@@ -12,4 +12,6 @@ class SingleElementBulkPipe[E](data:E) extends BulkPipeData[E] {
      o += data;
      return o.toIterator
    };
+
+   def count() : Long = 1L
  }

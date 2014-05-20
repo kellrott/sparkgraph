@@ -19,6 +19,10 @@ abstract class SparkGraphBulkData[E](
     return currentRDD().collect().toIterator.asInstanceOf[Iterator[E]];
   }
 
+  def count() : scala.Long = {
+    return currentRDD().count()
+  }
+
   def currentRDD() : RDD[E];
 
 }

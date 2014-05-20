@@ -28,31 +28,38 @@ object SparkGremlinPipeline {
 class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipelineBase[S, E] with Iterable[E] {
 
   pipes = new java.util.ArrayList[Pipe[_, _]]();
-  if (start.isInstanceOf[SparkGraphElementSet[_]]) {
-    val sparkElementSet = start.asInstanceOf[SparkGraphElementSet[_]];
-    if (sparkElementSet.elementClass() == classOf[SparkVertex]) {
-      pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
+  if (start != null) {
+    if (start.isInstanceOf[SparkGraphElementSet[_]]) {
+      if (start.isInstanceOf[SparkGraph]) {
+        pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
+      } else {
+        val sparkElementSet = start.asInstanceOf[SparkGraphElementSet[_]];
+        if (sparkElementSet.elementClass() == classOf[SparkVertex]) {
+          pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkVertex]]));
+          pipes.add(new SparkGraphQueryPipe[SparkVertex](BulkDataType.VERTEX_DATA));
+        } else if (sparkElementSet.elementClass() == classOf[SparkEdge]) {
+          pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
+          pipes.add(new SparkGraphQueryPipe[SparkEdge](BulkDataType.EDGE_DATA));
+        } else {
+          throw new RuntimeException("Unable to init pipeline")
+        }
+      }
+      /*
+    } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
+      pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkGraphElement]]));
+      */
+    } else if (start.isInstanceOf[SparkVertex]) {
+      val sparkStart = start.asInstanceOf[SparkVertex]
+      val startID = sparkStart.getId
+      val startRDD = sparkStart.graph.graphX().vertices.filter(x => x._1 == startID).map(_._2);
+      pipes.add(new SparkGremlinStartPipe(new SimpleGraphElementSet[SparkVertex](sparkStart.graph, startRDD, classOf[SparkVertex])));
       pipes.add(new SparkGraphQueryPipe[SparkVertex](BulkDataType.VERTEX_DATA));
-
-    } else if (sparkElementSet.elementClass() == classOf[SparkEdge]) {
-      pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkEdge]]));
-      pipes.add(new SparkGraphQueryPipe[SparkEdge](BulkDataType.EDGE_DATA));
     } else {
       throw new RuntimeException("Unable to init pipeline")
     }
-  /*
-  } else if (start.isInstanceOf[SparkGraphElementSet[SparkGraphElement]]) {
-    pipes.add(new SparkGremlinStartPipe(start.asInstanceOf[SparkGraphElementSet[SparkGraphElement]]));
-    */
-  } else if (start.isInstanceOf[SparkVertex]) {
-    val sparkStart = start.asInstanceOf[SparkVertex]
-    val startID = sparkStart.getId
-    val startRDD = sparkStart.graph.graphX().vertices.filter( x => x._1 == startID  ).map(_._2);
-    pipes.add(new SparkGremlinStartPipe(new SimpleGraphElementSet[SparkVertex](sparkStart.graph, startRDD, classOf[SparkVertex])));
-    pipes.add(new SparkGraphQueryPipe[SparkVertex](BulkDataType.VERTEX_DATA));
-  } else {
-    throw new RuntimeException("Unable to init pipeline")
   }
+
+
 
   def optimize(v: Boolean): SparkGremlinPipeline[S, E] = {
     return this;
@@ -65,8 +72,10 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
    * @return the extended Pipeline
    */
   def add[T](pipe: Pipe[_, T]): SparkGremlinPipeline[S, T] = {
-    this.addPipe(pipe)
-    return this.asInstanceOf[SparkGremlinPipeline[S, T]]
+    val out = new SparkGremlinPipeline[S,T](null)
+    this.pipes.asScala.foreach(out.addPipe(_))
+    out.addPipe(pipe)
+    return out
   }
 
   /**
@@ -594,6 +603,13 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
 
   def identity(): SparkGremlinPipeline[S, E] = {
     throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+  }
+
+  override def count() : scala.Long = {
+    if (endPipe.isInstanceOf[BulkPipe[_,_]]) {
+      return endPipe.asInstanceOf[BulkPipe[_,_]].bulkProcessStart().count()
+    }
+    return super.count()
   }
 
 }
