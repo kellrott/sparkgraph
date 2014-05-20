@@ -6,7 +6,6 @@ import org.apache.spark.rdd.RDD
  * Created by kellrott on 2/8/14.
  */
 abstract class RDDIterator[O] extends java.util.Iterator[O] with java.lang.Iterable[O] {
-  def elementRDD() : RDD[O]
   def elementClass() : Class[_]
 
   def process(in: Any): O

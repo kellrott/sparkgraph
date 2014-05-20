@@ -6,4 +6,5 @@ package sparkgremlin.gremlin
 trait BulkPipeData[T] {
    def extract() : Iterator[T]
    def count() : scala.Long
+   def dataType() : BulkDataType.Value
  }

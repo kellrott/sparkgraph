@@ -23,6 +23,8 @@ abstract class SparkGraphBulkData[E](
     return currentRDD().count()
   }
 
-  def currentRDD() : RDD[E];
+  def currentRDD() : RDD[E]
+
+  def dataType() : BulkDataType.Value = elementType
 
 }

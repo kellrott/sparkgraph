@@ -22,6 +22,7 @@ import sparkgremlin.blueprints.io.build._
 import org.apache.spark.graphx.impl.{GraphImpl => GraphXImplGraph, EdgePartitionBuilder}
 import scala.reflect.ClassTag
 import com.tinkerpop.blueprints.Edge
+import org.apache.spark.graphx.{VertexRDD, EdgeRDD}
 
 object SparkGraph {
   val FEATURES = new Features();
@@ -232,40 +233,12 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   def getVertices: java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[Vertex](this, graph.vertices.map(_._2), classOf[SparkVertex] )
-    /*
-    val flatRDD = graph.mapReduceTriplets[(SparkVertex,Array[SparkEdge])](
-      x => {
-        Iterator( (x.srcId, (x.srcAttr, Array(x.attr)  ) ), (x.dstId, (x.dstAttr, Array(x.attr))) )
-      },
-      (y,z) => {
-        (y._1, y._2 ++ z._2)
-      }
-    )
-    flatRDD
-    assert(graph.vertices.count() == flatRDD.count())
-
-    return new SparkGraphElementSet[Vertex] {
-      def remove() = {}
-
-      override def process(in: Any): Vertex = {
-        val tin = in.asInstanceOf[(SparkVertex, Array[SparkEdge])]
-        tin._1.edgeSet = tin._2.to[ArrayBuffer]
-        tin._1.graph = SparkGraph.this
-        tin._1
-      }
-
-      override def elementClass(): Class[_] = classOf[SparkVertex]
-      override def elementRDD(): RDD[Vertex] = graph.vertices.mapValues( _.asInstanceOf[Vertex] ).values
-      override def getRDD(): RDD[(SparkVertex, Array[SparkEdge])] = flatRDD.values
-      override def graphX(): graphx.Graph[SparkVertex, SparkEdge] = graph
-    }
-    */
+    return new SimpleGraphElementSet[SparkVertex,Vertex](this, classOf[SparkVertex], x => true )
   }
 
   def getVertices(key: String, value: scala.Any): java.lang.Iterable[Vertex] = {
     flushUpdates();
-    return new SimpleGraphElementSet[SparkVertex](this, graph.vertices.filter(x => x._2.getProperty(key) == value).map(_._2), classOf[SparkVertex] ).asInstanceOf[java.lang.Iterable[Vertex]]
+    return new SimpleGraphElementSet[SparkVertex, Vertex](this, classOf[SparkVertex], x => x.getProperty(key) == value)
   }
 
   def addEdge(id: Any, outVertex: Vertex, inVertex: Vertex, label: String): Edge = {
@@ -288,14 +261,12 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   def getEdges: Iterable[Edge] = {
     flushUpdates();
-    val out = graph.edges.map( x => x.attr );
-    return new SimpleGraphElementSet[SparkEdge](this, out, classOf[SparkEdge]).asInstanceOf[Iterable[Edge]];
+    return new SimpleGraphElementSet[SparkEdge,Edge](this, classOf[SparkEdge], x => true )
   }
 
   def getEdges(key: String, value: scala.Any): Iterable[Edge] = {
     flushUpdates();
-    val out = graph.edges.filter( _.attr.labelMatch(key, value.toString) );
-    return new SimpleGraphElementSet[SparkEdge](this, out.map(_.attr), classOf[SparkEdge]).asInstanceOf[java.lang.Iterable[Edge]];
+    return new SimpleGraphElementSet[SparkEdge, Edge](this, classOf[SparkEdge], x => x.labelMatch(key, value.toString) )
   }
 
   def query(): GraphQuery = {
@@ -315,37 +286,18 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     graph
   };
 
-  def elementRDD(): RDD[SparkGraphElement] = {
-    //return curgraph.flatMap( x => x._2.edgeSet.map( _.asInstanceOf[SparkGraphElement] ) ).union( curgraph.map( _.asInstanceOf[SparkGraphElement]) );
-    return graph.vertices.map( _._2 )
-  }
-
-  /*
-  def getCachedVertices(dir : Direction) : RDD[SparkVertex] = {
-    val flatRDD = graph.mapReduceTriplets[SparkVertex](  x => {
-      val o_src = new SparkVertex(x.srcAttr.id, null)
-      val o_dst = new SparkVertex(x.dstAttr.id, null)
-      x.srcAttr.propMap.foreach( x => o_src.propMap(x._1) = x._2 )
-      x.dstAttr.propMap.foreach( x => o_dst.propMap(x._1) = x._2 )
-      if (dir == Direction.OUT) {
-        o_src.edgeSet += x.attr
-      } else if (dir == Direction.IN) {
-        o_dst.edgeSet += x.attr
-      } else {
-        o_src.edgeSet += x.attr
-        o_dst.edgeSet += x.attr
-      }
-      Iterator((x.srcId, o_src),(x.dstId,o_dst))
-    },
-      (y,z) => {
-        y.edgeSet ++= z.edgeSet;
-        y
-    })
-    flatRDD.map( _._2 )
-  }
-  */
-
   override def process(in: Any): SparkGraphElement = in.asInstanceOf[SparkGraphElement]
 
   override def getRDD(): RDD[SparkGraphElement] = graph.vertices.values.map( _.asInstanceOf[SparkGraphElement])
+
+  override def selectEdgeRDD() : EdgeRDD[Boolean] = {
+    flushUpdates()
+    graphX().edges.mapValues(x=>true)
+  }
+
+  override def selectVertexRDD() : VertexRDD[Boolean] = {
+    flushUpdates()
+    graphX().vertices.mapValues(x=>true)
+  }
+
 }

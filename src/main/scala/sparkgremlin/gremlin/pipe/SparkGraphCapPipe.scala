@@ -1,6 +1,6 @@
 package sparkgremlin.gremlin.pipe
 
-import sparkgremlin.gremlin.{SparkPipelineException, BulkPipeData, BulkPipe}
+import sparkgremlin.gremlin.{BulkDataType, SparkPipelineException, BulkPipeData, BulkPipe}
 
 /**
  * Created by kellrott on 2/8/14.
@@ -14,7 +14,7 @@ class SparkGraphCapPipe[S,E]() extends BulkPipe[S,E] {
      if (!bulkStartPipe.isInstanceOf[BulkSideEffectPipe[S,E]]) {
        throw new RuntimeException("Cap not connected to side effect pipe");
      }
-     return new SingleElementBulkPipe(bulkStartPipe.asInstanceOf[BulkSideEffectPipe[S,E]].getSideEffect());
+     return new SingleElementBulkPipe(bulkStartPipe.asInstanceOf[BulkSideEffectPipe[S,E]].getSideEffect(), BulkDataType.OTHER_DATA);
    }
 
  }
