@@ -87,6 +87,13 @@ public class SparkQueryMethodTest extends BaseTest {
     }
 
 
+    public void test_link_property_count() throws Exception {
+        SparkGraph sg = SparkGraphTestFactory.createSparkGraph(sc);
+        SparkGremlinPipeline gr = new SparkGremlinPipeline(sg);
+        long count = gr.V().has("name", "marko").out("created").property("lang").count();
+        assertEquals(1, count);
+    }
+
     public void doTestSuite(final TestSuite testSuite) throws Exception {
         String doTest = System.getProperty("testSparkGraph");
         if (doTest == null || doTest.equals("true")) {

@@ -20,30 +20,23 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
      //bs.stateGraph.vertices.collect().foreach(println)
      //bs.stateGraph.triplets.collect().foreach(println(_))
-     val outvert = bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+     val local_labels = labels
+     val outstate = bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
        x => {
-         if (x.srcAttr._2 != null) {
+         if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
            Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
          } else {
-           Iterator.empty
+           Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
          }
        },
        (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
      )
+     //println("next")
+     //outstate.collect().foreach(println)
      return new SparkGraphBulkData[SparkVertex](
-     bs.graphData, graphx.Graph(outvert, bs.stateGraph.edges), bs.asColumns, bs.elementType, bs.extractKey
+     bs.graphData, graphx.Graph(outstate, bs.stateGraph.edges), bs.asColumns, bs.elementType, bs.extractKey
      ) {
-       def currentRDD(): RDD[SparkVertex] = outvert.map( _._2._1 )
+       def currentRDD(): RDD[SparkVertex] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map( _._2._1 )
      }
-     /*
-     val edges = bs.graphData.graphRDD().map( x => (x._1, x._2.edgeSet.map(y => y.inVertexId) ) );
-     val n = edges.join( bs.graphState ).flatMap( x => x._2._1.map( y => (y, x._2._2)) );
-     val reduced = n.reduceByKey( (x,y) => GremlinVertex.merge(x, y) );
-     return new SparkGraphBulkData[SparkVertex](
-       bs.graphData, reduced, bs.asColumns, BulkDataType.VERTEX_DATA, null
-     ) {
-       def currentRDD(): RDD[SparkVertex] = graphData.graphRDD().map( _._2 )
-     }
-     */
    }
  }

@@ -23,7 +23,7 @@ class SparkGraphPropertyPipe[S <: SparkGraphElement](name:String) extends BulkPi
      ) {
        override def currentRDD(): RDD[AnyRef] = {
          val n = name;
-         return bs.currentRDD().map( _.getProperty(n) )
+         return bs.currentRDD().map( _.getProperty(n).asInstanceOf[AnyRef] )
        }
      }
    }

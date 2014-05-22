@@ -31,6 +31,7 @@ object GremlinVertex {
      }
      return out;
    }
+
  }
 
 
@@ -41,4 +42,14 @@ class GremlinVertex extends Serializable {
   }
   var travelers : Array[GremlinTraveler] = null;
   var travelerCount = 0;
+
+  def zero() : GremlinVertex = {
+    travelerCount = 0
+    travelers = null
+    return this
+  }
+
+  override def toString() : String = {
+    return "GremlineVertex[count=%d]".format(travelerCount)
+  }
 }

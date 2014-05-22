@@ -9,5 +9,5 @@ import org.apache.spark.rdd.RDD
 abstract class SparkGraphElementSet[E] extends RDDIterator[E] {
   def graphX() : GraphXGraph[SparkVertex, SparkEdge]
   def selectVertexRDD() : VertexRDD[Boolean]
-  def selectEdgeRDD() : EdgeRDD[Boolean]
+  def selectEdgeRDD() : EdgeRDD[Boolean,SparkVertex]
 }

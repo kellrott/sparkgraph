@@ -80,15 +80,27 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           this.value
         }
-        val step = y.stateGraph.vertices.filter( x => SparkPropertyFilterPipe.filterVertexID( x._2._1, x._2._2, searchPredicate, searchValue ))
+        val step = y.stateGraph.vertices.mapValues( x => {
+          if ( SparkPropertyFilterPipe.filterVertexID( x._1, x._2, searchPredicate, searchValue ) ) {
+            (x._1, x._2)
+          } else {
+            (x._1, x._2.zero())
+          }
+        })
         return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
-          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX().vertices.join(step).map(_._2._1)
+          def currentRDD(): RDD[SparkGraphElement] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map(_._2._1)
         }
       } else {
         val searchValue = value
-        val step = y.stateGraph.vertices.filter( x => SparkPropertyFilterPipe.filterVertex(x._2._1, x._2._2, searchKey, searchPredicate, searchValue ))
+        val step = y.stateGraph.vertices.mapValues( x => {
+          if ( SparkPropertyFilterPipe.filterVertex(x._1, x._2, searchKey, searchPredicate, searchValue ) ) {
+            (x._1, x._2)
+          } else {
+            (x._1, x._2.zero())
+          }
+        })
         return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
-          def currentRDD(): RDD[SparkGraphElement] = y.graphData.graphX.vertices.join(step).map(_._2._1)
+          def currentRDD(): RDD[SparkGraphElement] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map(_._2._1)
         }
       }
     }

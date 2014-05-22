@@ -416,6 +416,10 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     return this.add(new SparkGraphConnectedVertex(Direction.OUT, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
+  def out(label: String): SparkGremlinPipeline[S,Vertex] = {
+    return this.out(Integer.MAX_VALUE, label)
+  }
+
   def out(labels: String*): SparkGremlinPipeline[S, Vertex] = {
     return this.out(Integer.MAX_VALUE, labels:_*)
   }

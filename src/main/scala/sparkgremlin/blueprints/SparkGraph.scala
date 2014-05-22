@@ -290,7 +290,7 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
 
   override def getRDD(): RDD[SparkGraphElement] = graph.vertices.values.map( _.asInstanceOf[SparkGraphElement])
 
-  override def selectEdgeRDD() : EdgeRDD[Boolean] = {
+  override def selectEdgeRDD() : EdgeRDD[Boolean,SparkVertex] = {
     flushUpdates()
     graphX().edges.mapValues(x=>true)
   }

@@ -46,7 +46,7 @@ class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:Spa
     graphX().vertices.mapValues( x => local_filter(x.asInstanceOf[E]) )
   }
 
-  def selectEdgeRDD(): EdgeRDD[Boolean] = {
+  def selectEdgeRDD(): EdgeRDD[Boolean,SparkVertex] = {
     if (elementClass() != classOf[SparkEdge]) {
       throw new RuntimeException("Selecting Edges in non-edge element set")
     }
