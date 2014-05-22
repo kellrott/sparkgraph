@@ -4,7 +4,7 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 
 resolvers += "Spray Repository" at "http://repo.spray.cc/"
 
-addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.5.1")
+addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.10.1")
 
