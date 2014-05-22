@@ -300,4 +300,5 @@ class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage
     graphX().vertices.mapValues(x=>true)
   }
 
+  override def filter(in: AnyRef): Boolean = true
 }

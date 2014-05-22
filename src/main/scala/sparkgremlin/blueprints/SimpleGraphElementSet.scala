@@ -8,7 +8,7 @@ import scala.reflect.ClassTag
 /**
  * Created by kellrott on 2/8/14.
  */
-class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:SparkGraph, inElementClass : Class[E], filter : (E) => Boolean)(implicit m:ClassTag[E]) extends SparkGraphElementSet[O] {
+class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:SparkGraph, inElementClass : Class[E], prefilter : E => Boolean)(implicit m:ClassTag[E]) extends SparkGraphElementSet[O] {
 
   def elementClass() : Class[_] = inElementClass
   def flushUpdates() : Boolean = inGraph.flushUpdates()
@@ -28,7 +28,7 @@ class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:Spa
   }
 
   override def getRDD(): RDD[E] = {
-    val local_filter = filter //you need to you a local copy, otherwise the whole class gets passed to the closure
+    val local_filter = prefilter //you need to you a local copy, otherwise the whole class gets passed to the closure
     if (inElementClass == classOf[SparkVertex]) {
       return inGraph.graphX().vertices.filter( x => local_filter(x._2.asInstanceOf[E]) ).map(_._2.asInstanceOf[E])
     }
@@ -42,7 +42,7 @@ class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:Spa
     if (elementClass() != classOf[SparkVertex]) {
       throw new RuntimeException("Selecting Vertices in non-vertex element set")
     }
-    val local_filter = filter
+    val local_filter = prefilter
     graphX().vertices.mapValues( x => local_filter(x.asInstanceOf[E]) )
   }
 
@@ -50,7 +50,12 @@ class SimpleGraphElementSet[E <: SparkGraphElement,O <: Element](var inGraph:Spa
     if (elementClass() != classOf[SparkEdge]) {
       throw new RuntimeException("Selecting Edges in non-edge element set")
     }
-    val local_filter = filter
+    val local_filter = prefilter
     graphX().edges.mapValues( x => local_filter(x.attr.asInstanceOf[E]) )
   }
+
+  def filter(in:AnyRef) : Boolean = {
+    prefilter(in.asInstanceOf[E])
+  }
+
 }

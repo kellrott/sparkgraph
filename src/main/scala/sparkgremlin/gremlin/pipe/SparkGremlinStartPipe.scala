@@ -22,37 +22,35 @@ class SparkGremlinStartPipe[E <: SparkGraphElement](startGraph : SparkGraphEleme
   val cached_start = init()
 
   def init() : BulkPipeData[E] = {
-    val nv = if (startGraph.elementClass() == classOf[SparkVertex]) {
-      startGraph.graphX().vertices.leftJoin(startGraph.selectVertexRDD())((x, y, z) => {
-        if (z.get) {
-          (y, new GremlinVertex(1))
-        } else {
-          (y, new GremlinVertex(0))
-        }
+    var local_start = startGraph
+    val state_graph_1 = if (startGraph.elementClass() == classOf[SparkVertex]) {
+      startGraph.graphX().mapVertices( (vid,x) => {
+        if (local_start.filter(x))
+          (x, new GremlinVertex(1))
+        else
+          (x, new GremlinVertex(0))
       })
     } else {
-      startGraph.graphX().vertices.map(x => {
-        (x._1, (x._2, new GremlinVertex(0)))
+      startGraph.graphX().mapVertices( (vid,x) => {
+        (x, new GremlinVertex(0))
       })
     }
 
-    val ne: EdgeRDD[(SparkEdge, Boolean),SparkVertex] = if (startGraph.elementClass() == classOf[SparkEdge]) {
-      startGraph.graphX().edges.innerJoin(startGraph.selectEdgeRDD())((a, b, x, y) => {
-        if (y) {
-          (x, true)
-        } else {
-          (x, false)
-        }
+    val state_graph_2 = if (startGraph.elementClass() == classOf[SparkEdge]) {
+      state_graph_1.mapEdges( x => {
+        if (local_start.filter(x.attr))
+          (x.attr, true)
+        else
+          (x.attr, false)
       })
     } else {
-      startGraph.graphX().edges.mapValues(x => {
-        (x.attr, false)
-      })
+      state_graph_1.mapEdges( x => (x.attr,true) )
     }
+
 
     return new SparkGraphBulkData[E](
       startGraph,
-      graphx.Graph(nv, ne).cache(),
+      state_graph_2.cache(),
       null, null, null) {
       def currentRDD(): RDD[E] = startGraph.graphX().vertices.map(_._2).asInstanceOf[RDD[E]]
     }

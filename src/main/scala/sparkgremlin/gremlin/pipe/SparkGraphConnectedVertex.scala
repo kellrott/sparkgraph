@@ -33,6 +33,7 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
      )
      //println("next")
      //outstate.collect().foreach(println)
+
      return new SparkGraphBulkData[SparkVertex](
      bs.graphData, graphx.Graph(outstate, bs.stateGraph.edges), bs.asColumns, bs.elementType, bs.extractKey
      ) {
