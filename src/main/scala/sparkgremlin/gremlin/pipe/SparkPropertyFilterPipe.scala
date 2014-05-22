@@ -80,50 +80,49 @@ class SparkPropertyFilterPipe extends BulkPipe[SparkGraphElement, SparkGraphElem
         } else {
           this.value
         }
-        val step = y.stateGraph.vertices.mapValues( x => {
+        val step = y.stateGraph.mapVertices( (vid,x) => {
           if ( SparkPropertyFilterPipe.filterVertexID( x._1, x._2, searchPredicate, searchValue ) ) {
             (x._1, x._2)
           } else {
             (x._1, x._2.zero())
           }
         })
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
           def currentRDD(): RDD[SparkGraphElement] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map(_._2._1)
         }
       } else {
         val searchValue = value
-        val step = y.stateGraph.vertices.mapValues( x => {
+        val step = y.stateGraph.mapVertices( (vid,x) => {
           if ( SparkPropertyFilterPipe.filterVertex(x._1, x._2, searchKey, searchPredicate, searchValue ) ) {
             (x._1, x._2)
           } else {
             (x._1, x._2.zero())
           }
         })
-        return new SparkGraphBulkData[SparkGraphElement](y.graphData, graphx.Graph(step, y.stateGraph.edges), y.asColumns, BulkDataType.VERTEX_DATA, null ) {
+        return new SparkGraphBulkData[SparkGraphElement](y.graphData, step, y.asColumns, BulkDataType.VERTEX_DATA, null ) {
           def currentRDD(): RDD[SparkGraphElement] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map(_._2._1)
         }
       }
     }
     if (y.elementType == BulkDataType.EDGE_DATA) {
-      val step = if (label != null || key == "label") {
+      val newStateGraph = if (label != null || key == "label") {
         val searchValue = if (label != null) {
           label;
         } else {
           value ;
         }
-        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdgesLabels(x.attr._1, searchPredicate, searchValue) ) ) );
+        y.stateGraph.mapEdges( x=> (x.attr._1, SparkPropertyFilterPipe.filterEdgesLabels(x.attr._1, searchPredicate, searchValue) ) )
       } else if (id != null || key == "id") {
         val searchValue = if (id != null) {
           id;
         } else {
           value;
         }
-        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdgesID(x.attr._1, searchPredicate, searchValue)) ) );
+        y.stateGraph.mapEdges( x=> (x.attr._1, SparkPropertyFilterPipe.filterEdgesID(x.attr._1, searchPredicate, searchValue)) )
       } else {
         val searchValue = value
-        y.stateGraph.edges.map( x=> new graphx.Edge(x.srcId, x.dstId, (x.attr._1, SparkPropertyFilterPipe.filterEdges(x.attr._1, searchKey, searchPredicate, searchValue)) ));
+        y.stateGraph.mapEdges( x=> (x.attr._1, SparkPropertyFilterPipe.filterEdges(x.attr._1, searchKey, searchPredicate, searchValue)) )
       }
-      val newStateGraph = graphx.Graph(y.stateGraph.vertices, step)
       return new SparkGraphBulkData[SparkGraphElement](
         y.graphData, newStateGraph, y.asColumns, BulkDataType.EDGE_DATA, null
       ) {
