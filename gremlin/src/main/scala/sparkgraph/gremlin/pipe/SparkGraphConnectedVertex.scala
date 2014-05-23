@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext._
 import sparkgraph.blueprints.SparkVertex
 import com.tinkerpop.blueprints.Direction
 import sparkgraph.gremlin._
-import org.apache.spark.graphx.VertexId
+import org.apache.spark.graphx.{VertexRDD, VertexId}
 import org.apache.spark.graphx
 
 /**
@@ -19,18 +19,44 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
    def bulkProcess(): BulkPipeData[SparkVertex] = {
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
      //bs.stateGraph.vertices.collect().foreach(println)
-     //bs.stateGraph.triplets.collect().foreach(println(_))
      val local_labels = labels
-     val outstate = bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
-       x => {
-         if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
-           Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
-         } else {
-           Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
-         }
-       },
-       (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
-     )
+     val outstate : VertexRDD[(SparkVertex,GremlinVertex)] = if (direction == Direction.IN) {
+       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+         x => {
+           if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
+             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, x.dstAttr._2)) )
+           } else {
+             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+           }
+         },
+         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+       )
+
+     } else if (direction == Direction.OUT) {
+       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+         x => {
+           if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
+             Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+           } else {
+             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+           }
+         },
+         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+       )
+     } else if(direction == Direction.BOTH) {
+       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+         x => {
+           if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
+             Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, x.dstAttr._2)) )
+           } else {
+             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+           }
+         },
+         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+       )
+     } else {
+      throw new RuntimeException("Unknown Direction:" + direction)
+     }
      //println("next")
      //outstate.collect().foreach(println)
 

@@ -89,15 +89,4 @@ public class SparkQueryMethodTest extends BaseTest {
         assertEquals(1, count);
     }
 
-    public void doTestSuite(final TestSuite testSuite) throws Exception {
-        String doTest = System.getProperty("testSparkGraph");
-        if (doTest == null || doTest.equals("true")) {
-            for (Method method : testSuite.getClass().getDeclaredMethods()) {
-                if (method.getName().startsWith("test")) {
-                    System.out.println("Testing " + method.getName() + "...");
-                    method.invoke(testSuite);
-                }
-            }
-        }
-    }
 }

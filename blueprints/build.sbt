@@ -1,5 +1,7 @@
 import AssemblyKeys._ // put this at the top of the file
 
+organization := "sparkgraph"
+
 name := "sparkgraph-blueprints"
 
 version := "0.1"

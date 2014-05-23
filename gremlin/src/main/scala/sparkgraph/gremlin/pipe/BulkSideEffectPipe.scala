@@ -9,4 +9,4 @@ import sparkgraph.gremlin.BulkPipe
   */
 trait BulkSideEffectPipe[S,T] extends BulkPipe[S,S] {
    def getSideEffect() : T;
- }
+}

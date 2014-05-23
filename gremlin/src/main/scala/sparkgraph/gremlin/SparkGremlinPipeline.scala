@@ -389,7 +389,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def in(labels: String*): SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphConnectedVertex(Direction.IN, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
   def in(branchFactor: Int, labels: String*): SparkGremlinPipeline[S, Vertex] = {
@@ -553,6 +553,13 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
 
   def __table(table: Table, columnFunctions: SparkGremlinPipelineBase.PipeFunctionWrapper): SparkGremlinPipeline[S, E] = {
     return this.add(new SparkGraphTablePipe(table, columnFunctions) );
+  }
+
+  def rdd[S]() : RDD[Map[String,AnyRef]] = {
+    if (endPipe.isInstanceOf[BulkPipe[_,S]]) {
+      return RDDUtil.pipe2rdd(endPipe.asInstanceOf[BulkPipe[_,S]].bulkProcessStart().asInstanceOf[SparkGraphBulkData[E]])
+    }
+    return null
   }
 
 
