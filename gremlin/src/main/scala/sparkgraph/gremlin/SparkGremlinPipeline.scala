@@ -139,7 +139,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def back(namedStep: String): SparkGremlinPipeline[S, _] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphBackPipe(namedStep))
   }
 
   def dedup(): SparkGremlinPipeline[S, E] = {

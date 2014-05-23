@@ -19,13 +19,13 @@ object GremlinVertex {
      return out;
    }
 
-   def addAsColumn(a: GremlinVertex, name: String, element : AnyRef) : GremlinVertex = {
+   def addAsColumn(a: GremlinVertex, name: String, vertexID: Long, element : AnyRef) : GremlinVertex = {
      val out = new GremlinVertex()
      out.travelerCount = a.travelerCount;
      out.travelers = if (a.travelers != null) {
-       a.travelers.map( x => GremlinTraveler.addAsColumn(x, name, element) )
+       a.travelers.map( x => GremlinTraveler.addAsColumn(x, name, vertexID, element) )
      } else if (a.travelerCount > 0) {
-       0.until(a.travelerCount).map( x => GremlinTraveler.addAsColumn(new GremlinTraveler, name, element) ).toArray
+       0.until(a.travelerCount).map( x => GremlinTraveler.addAsColumn(new GremlinTraveler, name, vertexID, element) ).toArray
      } else {
        null
      }
@@ -40,6 +40,11 @@ class GremlinVertex extends Serializable {
     this();
     travelerCount = count;
   }
+  def this(traveler:GremlinTraveler) = {
+    this(1)
+    travelers = Array(traveler)
+  }
+
   var travelers : Array[GremlinTraveler] = null;
   var travelerCount = 0;
 

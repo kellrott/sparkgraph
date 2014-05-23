@@ -10,7 +10,7 @@ import org.apache.spark.graphx
 abstract class SparkGraphBulkData[E](
                                       val graphData : SparkGraphElementSet[_],
                                       val stateGraph : graphx.Graph[(SparkVertex,GremlinVertex), (SparkEdge,Boolean)],
-                                      val asColumns: Array[String],
+                                      val asColumns: Array[(String, BulkDataType.Value)],
                                       val elementType : BulkDataType.Value,
                                       val extractKey : String) extends BulkPipeData[E]
 {
