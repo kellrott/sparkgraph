@@ -20,48 +20,53 @@ class SparkGraphConnectedVertex[S](val direction:Direction, val max_branch : Int
      val bs = bulkStarts.asInstanceOf[SparkGraphBulkData[SparkVertex]]
      //bs.stateGraph.vertices.collect().foreach(println)
      val local_labels = labels
-     val outstate : VertexRDD[(SparkVertex,GremlinVertex)] = if (direction == Direction.IN) {
-       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+     val outstate : VertexRDD[GremlinVertex] = if (direction == Direction.IN) {
+       bs.stateGraph.mapReduceTriplets[GremlinVertex](
          x => {
            if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
-             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, x.dstAttr._2)) )
+             Iterator( (x.dstId, new GremlinVertex()), (x.srcId, x.dstAttr._2))
            } else {
-             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+             Iterator( (x.dstId, new GremlinVertex()), (x.srcId, new GremlinVertex()))
            }
          },
-         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+         (y,z) => GremlinVertex.merge(y, z)
        )
-
      } else if (direction == Direction.OUT) {
-       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+       bs.stateGraph.mapReduceTriplets[GremlinVertex](
          x => {
            if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
-             Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+             Iterator( (x.dstId,  x.srcAttr._2) , (x.srcId, new GremlinVertex()) )
            } else {
-             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+             Iterator( (x.dstId, new GremlinVertex()), (x.srcId, new GremlinVertex()) )
            }
          },
-         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+         (y,z) => (GremlinVertex.merge(y, z))
        )
      } else if(direction == Direction.BOTH) {
-       bs.stateGraph.mapReduceTriplets[(SparkVertex,GremlinVertex)](
+       bs.stateGraph.mapReduceTriplets[GremlinVertex](
          x => {
            if (local_labels == null || local_labels.length == 0 || local_labels.contains(x.attr._1.getLabel) ) {
-             Iterator( (x.dstId, (x.dstAttr._1, x.srcAttr._2)), (x.srcId, (x.srcAttr._1, x.dstAttr._2)) )
+             Iterator( (x.dstId, x.srcAttr._2), (x.srcId, (x.dstAttr._2)) )
            } else {
-             Iterator( (x.dstId, (x.dstAttr._1, new GremlinVertex())), (x.srcId, (x.srcAttr._1, new GremlinVertex())) )
+             Iterator( (x.dstId, new GremlinVertex()), (x.srcId, new GremlinVertex()) )
            }
          },
-         (y,z) => (y._1, GremlinVertex.merge(y._2, z._2))
+         (y,z) => GremlinVertex.merge(y, z)
        )
      } else {
       throw new RuntimeException("Unknown Direction:" + direction)
      }
      //println("next")
      //outstate.collect().foreach(println)
-
+     val outgraph = bs.stateGraph.outerJoinVertices(outstate)( (vid,x,y) => {
+       if (y.isDefined) {
+         (x._1, y.get)
+       } else {
+         (x._1, new GremlinVertex(0))
+       }
+     })
      return new SparkGraphBulkData[SparkVertex](
-     bs.graphData, graphx.Graph(outstate, bs.stateGraph.edges), bs.asColumns, bs.elementType, bs.extractKey
+     bs.graphData, outgraph, bs.asColumns, bs.elementType, bs.extractKey
      ) {
        def currentRDD(): RDD[SparkVertex] = stateGraph.vertices.filter(_._2._2.travelerCount > 0).map( _._2._1 )
      }

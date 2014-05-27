@@ -5,7 +5,7 @@ import sparkgraph.blueprints.SparkGraph
 import sparkgraph.blueprints.test.SparkGraphTestFactory
 import sparkgraph.gremlin.SparkGremlinPipeline
 import org.apache.spark.{SparkConf, SparkContext}
-import junit.framework.{Assert, TestCase}
+import junit.framework.Assert
 
 class GremlinCapTests extends BaseTest {
 
@@ -52,6 +52,15 @@ class GremlinCapTests extends BaseTest {
     var out = rdd.map( x => x("friend").asInstanceOf[String]).collect()
     Assert.assertEquals(1, out.length)
     assert(out(0) == "marko")
+  }
+
+  def test_in_cap2() = {
+    val sg: SparkGraph = SparkGraphTestFactory.createSparkGraph2(sc)
+    val gr = new SparkGremlinPipeline(sg)
+    var rdd = gr.V.has("name", "vadas").as("src").in("dates").property("name").as("other").rdd()
+    var out = rdd.map( x => x("other").asInstanceOf[String]).collect()
+    Assert.assertEquals(1, out.length)
+    assert(out(0) == "anna")
   }
 
   def test_prop_back_cap() = {
