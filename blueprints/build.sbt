@@ -6,7 +6,9 @@ name := "sparkgraph-blueprints"
 
 version := "0.1"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.4"
+
+// conflictManager := ConflictManager.strict
 
 libraryDependencies ++= Seq(
 	"org.apache.spark" %% "spark-core" % "1.0.0",
@@ -17,11 +19,22 @@ libraryDependencies ++= Seq(
 	"com.tinkerpop.gremlin" % "gremlin-java" % "2.4.0",
 	//"com.twitter" % "parquet-avro" % "1.3.2",
 	"com.twitter" % "parquet-avro" % "1.4.3",
-	"org.apache.avro" % "avro" % "1.7.4",
+	"org.apache.avro" % "avro" % "1.7.6",
 	"com.tinkerpop.gremlin" % "gremlin-test" % "2.4.0" % "test",
-	"org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-	"com.novocode" % "junit-interface" % "0.9" % "test"
-)	
+	"org.scalatest" %% "scalatest" % "2.1.5" % "test",
+	"com.novocode" % "junit-interface" % "0.10" % "test"
+)
+
+dependencyOverrides ++= Set(
+	"com.fasterxml.jackson.core" % "jackson-core" % "2.3.0",
+	"com.fasterxml.jackson.core" % "jackson-databind" % "2.3.0",
+	"commons-codec" % "commons-codec" % "1.5",
+	"org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13",
+	"org.codehaus.jackson" % "jackson-core-asl" % "1.9.13",
+	"com.thoughtworks.paranamer" % "paranamer" % "2.6",
+	"org.slf4j" % "slf4j-api" % "1.7.5",
+	"junit" % "junit" % "4.11"
+)
 
 resolvers ++= Seq(
     "Akka Repository" at "http://repo.akka.io/releases/",
@@ -49,5 +62,3 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
 
 
 test in assembly := {}
-
-

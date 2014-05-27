@@ -6,7 +6,7 @@ name := "sparkgraph-gremlin"
 
 version := "0.1"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq(
 	"org.apache.spark" %% "spark-core" % "1.0.0",
@@ -19,9 +19,10 @@ libraryDependencies ++= Seq(
 	"com.twitter" % "parquet-avro" % "1.4.3",
 	"org.apache.avro" % "avro" % "1.7.4",
 	"com.tinkerpop.gremlin" % "gremlin-test" % "2.4.0" % "test",
-	"org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-	"com.novocode" % "junit-interface" % "0.9" % "test"
-)	
+	"org.scalatest" %% "scalatest" % "2.1.5" % "test",
+	"com.novocode" % "junit-interface" % "0.9" % "test",
+	"org.scala-lang" % "scala-library" % "2.10.3"
+)
 
 resolvers ++= Seq(
     "Akka Repository" at "http://repo.akka.io/releases/",
@@ -49,5 +50,3 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
 
 
 test in assembly := {}
-
-
