@@ -107,19 +107,20 @@ object SparkGraph {
 
 }
 
-class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge], defaultStorage: StorageLevel) extends SparkGraphElementSet[SparkGraphElement] with Graph {
+class SparkGraph(var graph : graphx.Graph[SparkVertex,SparkEdge]) extends SparkGraphElementSet[SparkGraphElement] with Graph {
 
-  def this(graph : graphx.Graph[SparkVertex,SparkEdge]) = {
-    this(graph, StorageLevel.MEMORY_ONLY)
-  }
-
-  def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge]) = {
-    this(graphx.Graph(vertices, edges.map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )), StorageLevel.MEMORY_ONLY)
+  def this(vertices:RDD[(Long,SparkVertex)], edges:RDD[SparkEdge], storageLevel:StorageLevel = StorageLevel.MEMORY_ONLY) = {
+    this(graphx.Graph(vertices, edges.map( x => new graphx.Edge(x.outVertexId, x.inVertexId, x) )))//, edgeStorageLevel=storageLevel, vertexStorageLevel = storageLevel))
   }
 
   var updates = new ArrayBuffer[BuildElement]();
 
-  override def toString() = "sparkgraph[nodes=" + graph.vertices.count + "]"
+  override def toString() : String = {
+    if (graph != null)
+      "sparkgraph[nodes=" + graph.vertices.count + "]"
+    else
+      "sparkgraph[]"
+  }
 
   def getFeatures: Features = SparkGraph.FEATURES;
 

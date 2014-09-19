@@ -95,9 +95,14 @@ object BlueprintParquet {
     val edges = sc.newAPIHadoopFile(new Path(dpath, "edges").toString, classOf[ParquetInputFormat[AvroEdge]],
       classOf[Void], classOf[AvroEdge], job.getConfiguration)
 
-    val graph = graphx.Graph[SparkVertex,SparkEdge]( verticies.map( x => (x._2.getId, avroVertex2Spark(x._2)) ), edges.map( x => new graphx.Edge(x._2.getSrc, x._2.getDest, avroEdge2Spark(x._2) ) ))
+    val graph = graphx.Graph[SparkVertex,SparkEdge](
+      verticies.map( x => (x._2.getId, avroVertex2Spark(x._2)) ),
+      edges.map( x => new graphx.Edge(x._2.getSrc, x._2.getDest, avroEdge2Spark(x._2) ) ),
+      edgeStorageLevel = defaultStorage,
+      vertexStorageLevel = defaultStorage
+    )
 
-    return new SparkGraph(graph, defaultStorage)
+    return new SparkGraph(graph)
   }
 
 

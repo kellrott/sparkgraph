@@ -11,8 +11,8 @@ scalaVersion := "2.10.4"
 // conflictManager := ConflictManager.strict
 
 libraryDependencies ++= Seq(
-	"org.apache.spark" %% "spark-core" % "1.0.0",
-	"org.apache.spark" %% "spark-graphx" % "1.0.0",
+	"org.apache.spark" %% "spark-core" % "1.1.0",
+	"org.apache.spark" %% "spark-graphx" % "1.1.0",
 	"com.tinkerpop.blueprints" % "blueprints-core" % "2.4.0",
 	"com.tinkerpop.blueprints" % "blueprints-test" % "2.4.0" % "test",
 	"com.tinkerpop" % "pipes" % "2.4.0",

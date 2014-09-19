@@ -2,6 +2,7 @@ package sparkgraph.blueprints.test;
 
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.spark.SparkContext;
+import org.apache.spark.storage.StorageLevel;
 import sparkgraph.blueprints.SparkGraph;
 
 /**
@@ -10,6 +11,10 @@ import sparkgraph.blueprints.SparkGraph;
 public class SparkGraphTestFactory {
 
     static public SparkGraph createSparkGraph(SparkContext sc) {
+        return createSparkGraph(sc, StorageLevel.NONE());
+    }
+
+    static public SparkGraph createSparkGraph(SparkContext sc, StorageLevel storageLevel) {
         SparkGraph graph = SparkGraph.generate(sc);
 
         Vertex marko = graph.addVertex("1");
