@@ -388,6 +388,10 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
     throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
   }
 
+  def in() : SparkGremlinPipeline[S, Vertex] = {
+    return this.add(new SparkGraphConnectedVertex(Direction.IN, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
+  }
+
   def in(labels: String*): SparkGremlinPipeline[S, Vertex] = {
     return this.add(new SparkGraphConnectedVertex(Direction.IN, Integer.MAX_VALUE, labels.toArray)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
@@ -397,7 +401,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def inV(): SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphConnectedVertex(Direction.IN, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
   def label(): SparkGremlinPipeline[S, String] = {
@@ -429,7 +433,7 @@ class SparkGremlinPipeline[S, E](val start: AnyRef) extends SparkGremlinPipeline
   }
 
   def outV(): SparkGremlinPipeline[S, Vertex] = {
-    throw new RuntimeException(SparkGremlinPipeline.NOT_IMPLEMENTED_ERROR)
+    return this.add(new SparkGraphConnectedVertex(Direction.OUT, Integer.MAX_VALUE, null)).asInstanceOf[SparkGremlinPipeline[S,Vertex]];
   }
 
   def map(keys: String*): SparkGremlinPipeline[S, java.util.Map[String, AnyRef]] = {
