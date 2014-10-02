@@ -8,10 +8,13 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import parquet.hadoop.ParquetInputFormat
 import parquet.avro.AvroReadSupport
-import sparkgraph.blueprints.avro.{AvroEdge, AvroVertex}
-import scala.collection.mutable.HashMap
-import com.tinkerpop.blueprints
+import sparkgraph.blueprints.avro.{ElementType, AvroElement, AvroEdge}
+import parquet.filter.ColumnRecordFilter._
+import parquet.filter.ColumnPredicates._
 import org.apache.hadoop.conf.Configuration
+import parquet.filter.{RecordFilter, UnboundRecordFilter}
+import java.lang
+import parquet.column.ColumnReader
 
 /**
  * Created by kellrott on 5/12/14.
@@ -77,35 +80,49 @@ abstract class BlueprintParquetReader[I, O <: SparkGraphElement](var conf:Config
 }
 
 
+class EdgeFilter extends UnboundRecordFilter() {
+  override def bind(readers: lang.Iterable[ColumnReader]): RecordFilter = {
+    column("type", equalTo(ElementType.EDGE)).bind(readers)
+  }
+}
+
+class VertexFilter extends UnboundRecordFilter() {
+  override def bind(readers: lang.Iterable[ColumnReader]): RecordFilter = {
+    column("type", equalTo(ElementType.VERTEX)).bind(readers)
+  }
+}
+
+
 object BlueprintParquetReader {
 
-  def openVertices(path:String) : BlueprintParquetReader[AvroVertex, SparkVertex] = {
+  def openVertices(path:String) : BlueprintParquetReader[AvroElement, SparkVertex] = {
     val job = new Job()
-    val vertices_path = new Path(new Path(path), "vertices")
+    val vertices_path = new Path(path)
     FileInputFormat.addInputPath(job, vertices_path)
-    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[AvroVertex]])
+    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[AvroElement]])
+    ParquetInputFormat.setUnboundRecordFilter(job, classOf[VertexFilter])
 
-    val vert_reader = new ParquetInputFormat[AvroVertex]()
+    val vert_reader = new ParquetInputFormat[AvroElement]()
     val splits = vert_reader.getSplits(job).asScala
 
-    return new BlueprintParquetReader[AvroVertex,SparkVertex](job.getConfiguration, splits.toList) {
-      override def process(in: AvroVertex): SparkVertex = BlueprintParquet.avroVertex2Spark(in)
+    return new BlueprintParquetReader[AvroElement,SparkVertex](job.getConfiguration, splits.toList) {
+      override def process(in: AvroElement): SparkVertex = BlueprintParquet.avroVertex2Spark(in)
     }
-
   }
 
 
-  def openEdges(path:String) : BlueprintParquetReader[AvroEdge, SparkEdge] = {
+  def openEdges(path:String) : BlueprintParquetReader[AvroElement, SparkEdge] = {
     val job = new Job()
-    val edge_path = new Path(new Path(path), "edges")
+    val edge_path = new Path(path)
     FileInputFormat.addInputPath(job, edge_path)
-    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[AvroEdge]])
+    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[AvroElement]])
+    ParquetInputFormat.setUnboundRecordFilter(job, classOf[EdgeFilter])
 
-    val edge_reader = new ParquetInputFormat[AvroEdge]()
+    val edge_reader = new ParquetInputFormat[AvroElement]()
     val splits = edge_reader.getSplits(job).asScala
 
-    return new BlueprintParquetReader[AvroEdge,SparkEdge](job.getConfiguration, splits.toList) {
-      override def process(in: AvroEdge): SparkEdge = BlueprintParquet.avroEdge2Spark(in)
+    return new BlueprintParquetReader[AvroElement,SparkEdge](job.getConfiguration, splits.toList) {
+      override def process(in: AvroElement): SparkEdge = BlueprintParquet.avroEdge2Spark(in)
     }
   }
 

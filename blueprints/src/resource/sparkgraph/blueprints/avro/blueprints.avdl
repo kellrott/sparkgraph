@@ -1,27 +1,30 @@
 // Compile:
-// java -jar avro-tools-1.7.6.jar idl src/resource/sparkgraph/blueprints/avro/blueprints.avdl src/resource/sparkgraph/blueprints/avro/blueprints.avpr
-// java -jar avro-tools-1.7.6.jar compile protocol src/resource/sparkgraph/blueprints/avro/blueprints.avpr src/main/java/
+// java -jar avro-tools-1.7.7.jar idl src/resource/sparkgraph/blueprints/avro/blueprints.avdl src/resource/sparkgraph/blueprints/avro/blueprints.avpr
+// java -jar avro-tools-1.7.7.jar compile protocol src/resource/sparkgraph/blueprints/avro/blueprints.avpr src/main/java/
 @namespace("sparkgraph.blueprints.avro")
 protocol Blueprints {
 
-record Property {
+enum ElementType {
+  VERTEX,
+  EDGE
+}
+
+record AvroProperty {
 	string key;
 	union { int, boolean, long, string, float, double } value;
 }
 
 record AvroEdge {
-    long id;
 	long src;
 	long dest;
 	string label;
-	array<Property> props;
 }
 
-
-record AvroVertex {
-    // ID
+record AvroElement {
+    ElementType type;
     long id;
-	array<Property> props;
+	array<AvroProperty> props;
+    union { null, AvroEdge } edge;
 }
 
 }
