@@ -6,8 +6,8 @@
 package sparkgraph.blueprints.avro;  
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
-public class Property extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Property\",\"namespace\":\"sparkgraph.blueprints.avro\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"int\",\"boolean\",\"long\",\"string\",\"float\",\"double\"]}]}");
+public class AvroProperty extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AvroProperty\",\"namespace\":\"sparkgraph.blueprints.avro\",\"fields\":[{\"name\":\"key\",\"type\":\"string\"},{\"name\":\"value\",\"type\":[\"int\",\"boolean\",\"long\",\"string\",\"float\",\"double\"]}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   @Deprecated public java.lang.CharSequence key;
   @Deprecated public java.lang.Object value;
@@ -17,12 +17,12 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>. 
    */
-  public Property() {}
+  public AvroProperty() {}
 
   /**
    * All-args constructor.
    */
-  public Property(java.lang.CharSequence key, java.lang.Object value) {
+  public AvroProperty(java.lang.CharSequence key, java.lang.Object value) {
     this.key = key;
     this.value = value;
   }
@@ -76,37 +76,37 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
     this.value = value;
   }
 
-  /** Creates a new Property RecordBuilder */
-  public static sparkgraph.blueprints.avro.Property.Builder newBuilder() {
-    return new sparkgraph.blueprints.avro.Property.Builder();
+  /** Creates a new AvroProperty RecordBuilder */
+  public static sparkgraph.blueprints.avro.AvroProperty.Builder newBuilder() {
+    return new sparkgraph.blueprints.avro.AvroProperty.Builder();
   }
   
-  /** Creates a new Property RecordBuilder by copying an existing Builder */
-  public static sparkgraph.blueprints.avro.Property.Builder newBuilder(sparkgraph.blueprints.avro.Property.Builder other) {
-    return new sparkgraph.blueprints.avro.Property.Builder(other);
+  /** Creates a new AvroProperty RecordBuilder by copying an existing Builder */
+  public static sparkgraph.blueprints.avro.AvroProperty.Builder newBuilder(sparkgraph.blueprints.avro.AvroProperty.Builder other) {
+    return new sparkgraph.blueprints.avro.AvroProperty.Builder(other);
   }
   
-  /** Creates a new Property RecordBuilder by copying an existing Property instance */
-  public static sparkgraph.blueprints.avro.Property.Builder newBuilder(sparkgraph.blueprints.avro.Property other) {
-    return new sparkgraph.blueprints.avro.Property.Builder(other);
+  /** Creates a new AvroProperty RecordBuilder by copying an existing AvroProperty instance */
+  public static sparkgraph.blueprints.avro.AvroProperty.Builder newBuilder(sparkgraph.blueprints.avro.AvroProperty other) {
+    return new sparkgraph.blueprints.avro.AvroProperty.Builder(other);
   }
   
   /**
-   * RecordBuilder for Property instances.
+   * RecordBuilder for AvroProperty instances.
    */
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<Property>
-    implements org.apache.avro.data.RecordBuilder<Property> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AvroProperty>
+    implements org.apache.avro.data.RecordBuilder<AvroProperty> {
 
     private java.lang.CharSequence key;
     private java.lang.Object value;
 
     /** Creates a new Builder */
     private Builder() {
-      super(sparkgraph.blueprints.avro.Property.SCHEMA$);
+      super(sparkgraph.blueprints.avro.AvroProperty.SCHEMA$);
     }
     
     /** Creates a Builder by copying an existing Builder */
-    private Builder(sparkgraph.blueprints.avro.Property.Builder other) {
+    private Builder(sparkgraph.blueprints.avro.AvroProperty.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.key)) {
         this.key = data().deepCopy(fields()[0].schema(), other.key);
@@ -118,9 +118,9 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
       }
     }
     
-    /** Creates a Builder by copying an existing Property instance */
-    private Builder(sparkgraph.blueprints.avro.Property other) {
-            super(sparkgraph.blueprints.avro.Property.SCHEMA$);
+    /** Creates a Builder by copying an existing AvroProperty instance */
+    private Builder(sparkgraph.blueprints.avro.AvroProperty other) {
+            super(sparkgraph.blueprints.avro.AvroProperty.SCHEMA$);
       if (isValidValue(fields()[0], other.key)) {
         this.key = data().deepCopy(fields()[0].schema(), other.key);
         fieldSetFlags()[0] = true;
@@ -137,7 +137,7 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
     }
     
     /** Sets the value of the 'key' field */
-    public sparkgraph.blueprints.avro.Property.Builder setKey(java.lang.CharSequence value) {
+    public sparkgraph.blueprints.avro.AvroProperty.Builder setKey(java.lang.CharSequence value) {
       validate(fields()[0], value);
       this.key = value;
       fieldSetFlags()[0] = true;
@@ -150,7 +150,7 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
     }
     
     /** Clears the value of the 'key' field */
-    public sparkgraph.blueprints.avro.Property.Builder clearKey() {
+    public sparkgraph.blueprints.avro.AvroProperty.Builder clearKey() {
       key = null;
       fieldSetFlags()[0] = false;
       return this;
@@ -162,7 +162,7 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
     }
     
     /** Sets the value of the 'value' field */
-    public sparkgraph.blueprints.avro.Property.Builder setValue(java.lang.Object value) {
+    public sparkgraph.blueprints.avro.AvroProperty.Builder setValue(java.lang.Object value) {
       validate(fields()[1], value);
       this.value = value;
       fieldSetFlags()[1] = true;
@@ -175,16 +175,16 @@ public class Property extends org.apache.avro.specific.SpecificRecordBase implem
     }
     
     /** Clears the value of the 'value' field */
-    public sparkgraph.blueprints.avro.Property.Builder clearValue() {
+    public sparkgraph.blueprints.avro.AvroProperty.Builder clearValue() {
       value = null;
       fieldSetFlags()[1] = false;
       return this;
     }
 
     @Override
-    public Property build() {
+    public AvroProperty build() {
       try {
-        Property record = new Property();
+        AvroProperty record = new AvroProperty();
         record.key = fieldSetFlags()[0] ? this.key : (java.lang.CharSequence) defaultValue(fields()[0]);
         record.value = fieldSetFlags()[1] ? this.value : (java.lang.Object) defaultValue(fields()[1]);
         return record;
